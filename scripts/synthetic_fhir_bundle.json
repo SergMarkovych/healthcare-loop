@@ -1,0 +1,9 @@
+{"resourceType":"Bundle","type":"transaction","entry":[
+{"request":{"method":"PUT","url":"Patient/hc-A"},"resource":{"resourceType":"Patient","id":"hc-A","name":[{"family":"Sample","given":["Jordan"]}],"gender":"male","birthDate":"1968-03-12"}},
+{"request":{"method":"PUT","url":"Patient/hc-B"},"resource":{"resourceType":"Patient","id":"hc-B","name":[{"family":"Demo","given":["Alex"]}],"gender":"female","birthDate":"1985-07-22"}},
+{"request":{"method":"PUT","url":"Condition/cond-A"},"resource":{"resourceType":"Condition","id":"cond-A","clinicalStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-clinical","code":"active"}]},"code":{"text":"Type 2 diabetes"},"subject":{"reference":"Patient/hc-A"}}},
+{"request":{"method":"PUT","url":"Observation/obs-A"},"resource":{"resourceType":"Observation","id":"obs-A","status":"final","code":{"text":"Hemoglobin A1c"},"subject":{"reference":"Patient/hc-A"},"valueQuantity":{"value":7.8,"unit":"%"}}},
+{"request":{"method":"PUT","url":"MedicationRequest/med-A"},"resource":{"resourceType":"MedicationRequest","id":"med-A","status":"active","intent":"order","medicationCodeableConcept":{"text":"Metformin"},"subject":{"reference":"Patient/hc-A"},"dosageInstruction":[{"text":"500 mg twice daily"}]}},
+{"request":{"method":"PUT","url":"Encounter/enc-A"},"resource":{"resourceType":"Encounter","id":"enc-A","status":"finished","class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"AMB"},"subject":{"reference":"Patient/hc-A"}}},
+{"request":{"method":"PUT","url":"Observation/obs-B"},"resource":{"resourceType":"Observation","id":"obs-B","status":"final","code":{"text":"Blood pressure"},"subject":{"reference":"Patient/hc-B"},"valueString":"120/80"}}
+]}
