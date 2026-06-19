@@ -43,18 +43,33 @@ replaced.
 
 ## Quickstart
 
-Works in **mock mode** the moment you clone it — no model required — so you can see
-the full review flow immediately.
+Works in **mock / deterministic mode** the moment you clone it — no model, no network
+required — so the full flow is visible immediately. Verified on Python 3.13 (Windows).
 
 ```bash
+python -m venv .venv
+# Windows:        .venv\Scripts\activate
+# macOS / Linux:  source .venv/bin/activate
 pip install -r requirements.txt
-python run.py
-# open http://127.0.0.1:8000
+python run.py                       # -> http://127.0.0.1:8000
 ```
 
-Pick a synthetic note → **Draft structured follow-up** → review the cards → **Approve
-& export**. With no local model running, you'll see a "Drafted by mock" badge; the
-review UX is identical.
+Two UIs are served:
+
+- **`/office`** — the **Office Assistant** (Direction B MVP): necessity gate → form
+  prefill → metrics. This is the primary demo.
+- **`/`** — the **follow-up extractor**: a note → a structured, reviewable plan.
+
+**Verify the FHIR pipeline offline** (second shell) — this is the integration story:
+
+```bash
+curl -X POST localhost:8000/api/fhir/reset
+curl -X POST localhost:8000/api/fhir/scan -H 'Content-Type: application/json' -d '{"source":"fixtures","which":1}'
+curl -X POST localhost:8000/api/fhir/scan -H 'Content-Type: application/json' -d '{"source":"fixtures","which":2}'
+curl localhost:8000/api/fhir/diff      # -> 2 new, 1 updated (metformin 500->1000), 1 not_returned, 7 unchanged
+```
+
+For the live `Synthea → local HAPI` path see [`FOUNDATION.md`](FOUNDATION.md).
 
 ### Turn on the real local model
 
