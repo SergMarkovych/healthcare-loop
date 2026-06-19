@@ -56,6 +56,51 @@ def prefill_request(request_id: str) -> dict:
             "patient_context": patient_context, "form": form}
 
 
+# Follow-up action per request category — the "task" half of "draft + task".
+# (title, owner, due) — illustrative workflow routing, no clinical content.
+_FOLLOWUP = {
+    "disability_tax_credit": ("Submit signed T2201 and confirm CRA receipt", "admin", "2 weeks"),
+    "insurance_std": ("Send completed statement to insurer; confirm receipt", "admin", "1 week"),
+    "school_note": ("Send accommodation note to family", "admin", "3 days"),
+    "sick_note": ("Issue patient attestation; no physician action", "patient", "same day"),
+}
+_DEFAULT_FOLLOWUP = ("Complete and route the document", "admin", "1 week")
+
+
+def approve_request(request_id: str, completed_fields: dict | None = None) -> dict:
+    """Physician approves a prefilled form.
+
+    Overlays the physician-completed clinical fields onto the prefilled form,
+    then produces a signed-ready draft + a follow-up task. Clinical-judgement
+    fields the physician left blank are reported as outstanding — never invented.
+    """
+    completed_fields = completed_fields or {}
+    base = prefill_request(request_id)
+    if base.get("status") != "ok":
+        return base  # not_found / no_form passthrough
+
+    req = base["request"]
+    form = base["form"]
+    fields = []
+    for f in form["fields"]:
+        entered = completed_fields.get(f["id"])
+        has_value = entered is not None and str(entered).strip() != ""
+        fields.append({**f,
+                       "value": entered if has_value else f["value"],
+                       "completed_by_physician": has_value and f["needs_physician"]})
+    outstanding = [f["label"] for f in fields
+                   if f["needs_physician"] and not str(f["value"]).strip()]
+
+    title, owner, due = _FOLLOWUP.get(req["category"], _DEFAULT_FOLLOWUP)
+    draft = {"form_id": form["form_id"], "title": form["title"], "fields": fields,
+             "complete": not outstanding, "outstanding_fields": outstanding}
+    task = {"id": f"task-{request_id}", "title": title, "owner": owner,
+            "due": due, "source_request": request_id, "status": "open"}
+    return {"status": "ok", "request": req, "route": base["route"],
+            "draft": draft, "follow_up_task": task,
+            "metrics": metrics.per_task(req["category"], base["route"])}
+
+
 def project(processed: list[dict]) -> dict:
     """processed: [{category, route}] for requests the physician has actioned."""
     return metrics.project_annual(processed)

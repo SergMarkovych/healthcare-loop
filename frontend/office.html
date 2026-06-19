@@ -227,21 +227,36 @@ function renderForm(req, data){
   $("approveBtn").addEventListener("click", ()=>approveForm(req, data));
 }
 
-function approveForm(req, data){
-  const vals = {};
-  $("review").querySelectorAll("[data-fid]").forEach(el=>vals[el.dataset.fid]=el.value);
-  const lines = data.form.fields.map(fld=>`${fld.label}: ${vals[fld.id]||"—"}`);
-  const draft = `FORM — ${data.form.title}\n${"-".repeat(40)}\n${lines.join("\n")}`;
+async function approveForm(req, data){
+  const completed = {};
+  $("review").querySelectorAll("[data-fid]").forEach(el=>{ if(el.value.trim()) completed[el.dataset.fid]=el.value; });
+  let res;
+  try{ res = await (await fetch("/api/office/approve",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({request_id:req.id, completed_fields:completed})})).json(); }
+  catch(e){ $("formResult").innerHTML = `<div class="empty">Couldn't reach the backend.</div>`; return; }
+  if(res.status!=="ok"){ $("formResult").innerHTML = `<div class="empty">${esc(res.message||"Could not generate draft.")}</div>`; return; }
+
+  const d = res.draft, task = res.follow_up_task;
+  const lines = d.fields.map(f=>`${f.label}: ${f.value||"—"}`);
+  const draftText = `FORM — ${d.title}\n${"-".repeat(40)}\n${lines.join("\n")}`;
+  const head = d.complete ? "Draft generated — ready for your signature"
+                          : "Draft saved — pending your clinical input";
+  const warn = d.complete ? "" :
+    `<div class="task" style="color:var(--amber)"><b>⚠ Incomplete</b> — clinical field(s) still required: ${esc(d.outstanding_fields.join(", "))}</div>`;
   $("formResult").innerHTML = `
     <div class="result">
       <div class="rt"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-        Draft generated — ready for your signature</div>
-      <pre>${esc(draft)}</pre>
-      <div class="task">↳ <b>Task created:</b> file completed “${esc(data.form.title)}” and notify ${esc(data.patient_context.name||"the patient")}.</div>
+        ${head}</div>
+      <pre>${esc(draftText)}</pre>
+      ${warn}
+      <div class="task">↳ <b>Task created:</b> ${esc(task.title)} · owner <b>${esc(task.owner)}</b> · due ${esc(task.due)}</div>
     </div>`;
-  markDone(req);
-  renderQueue();
-  $("approveBtn").disabled = true; $("approveBtn").textContent = "Approved ✓";
+  // Only count it as handled once the physician has completed the clinical fields.
+  if(d.complete){
+    markDone(req);
+    renderQueue();
+    $("approveBtn").disabled = true; $("approveBtn").textContent = "Approved ✓";
+  }
 }
 
 function showHandled(req){

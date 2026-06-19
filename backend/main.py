@@ -108,6 +108,11 @@ class PrefillRequest(BaseModel):
     request_id: str
 
 
+class ApproveRequest(BaseModel):
+    request_id: str
+    completed_fields: dict[str, str] = {}
+
+
 class MetricsRequest(BaseModel):
     processed: list[dict] = []
 
@@ -120,6 +125,11 @@ def office_requests() -> list[dict]:
 @app.post("/api/office/prefill")
 def office_prefill(req: PrefillRequest) -> dict:
     return office_service.prefill_request(req.request_id)
+
+
+@app.post("/api/office/approve")
+def office_approve(req: ApproveRequest) -> dict:
+    return office_service.approve_request(req.request_id, req.completed_fields)
 
 
 @app.post("/api/office/metrics")
