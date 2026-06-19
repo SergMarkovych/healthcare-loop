@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Loop — follow-up co-pilot</title>
+<style>
+  :root{
+    --paper:#F5F6F8; --card:#FFFFFF;
+    --ink:#1B2430; --ink-strong:#11161F; --muted:#5C6675; --faint:#8A93A1;
+    --hair:#E5E8EE;
+    --ok:#0E8A6B; --ok-bg:#E7F4EF;
+    --warn:#9A6B14; --warn-bg:#FBF1DC; --warn-line:#D9B45A;
+    --gone:#9AA2AE; --gone-bg:#F2F3F5;
+    --focus:#2D6CDF;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    -webkit-font-smoothing:antialiased; line-height:1.45;
+  }
+  .eyebrow{
+    font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--faint);
+  }
+
+  /* ---------- top bar ---------- */
+  header{
+    position:sticky; top:0; z-index:5;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:14px 22px; background:rgba(245,246,248,.86);
+    backdrop-filter:saturate(1.1) blur(8px);
+    border-bottom:1px solid var(--hair);
+  }
+  .brand{display:flex; align-items:baseline; gap:10px; margin-right:auto}
+  .wordmark{font-size:20px; font-weight:680; letter-spacing:-.02em; color:var(--ink-strong)}
+  .wordmark .dot{color:var(--ok)}
+  .tagline{font-size:13px; color:var(--muted)}
+  .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; font-weight:560; padding:5px 10px; border-radius:999px;
+    border:1px solid var(--hair); background:var(--card); color:var(--muted);
+    white-space:nowrap;
+  }
+  .chip svg{display:block}
+  .chip.mode-mock{color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line)}
+  .chip.mode-local{color:var(--ok); background:var(--ok-bg); border-color:var(--ok)}
+
+  /* ---------- layout ---------- */
+  main{max-width:1180px; margin:0 auto; padding:22px;
+       display:grid; grid-template-columns:0.92fr 1.08fr; gap:22px; align-items:start}
+  @media (max-width:920px){ main{grid-template-columns:1fr} }
+  .panel{background:var(--card); border:1px solid var(--hair); border-radius:14px; padding:18px}
+  .panel-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px}
+  .panel-head h2{margin:0; font-size:15px; font-weight:640; letter-spacing:-.01em}
+
+  /* ---------- left: note ---------- */
+  select,textarea,input{font-family:inherit}
+  .note-select{
+    width:100%; padding:9px 11px; font-size:13px; color:var(--ink);
+    border:1px solid var(--hair); border-radius:9px; background:var(--card);
+  }
+  textarea#note{
+    width:100%; min-height:330px; margin-top:12px; resize:vertical;
+    font-family:var(--mono); font-size:12.5px; line-height:1.55; color:var(--ink);
+    border:1px solid var(--hair); border-radius:10px; padding:13px; background:#FCFCFD;
+  }
+  .row{display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap}
+  .synthetic-note{font-size:12px; color:var(--faint); display:flex; align-items:center; gap:6px}
+  button{font-family:inherit; cursor:pointer}
+  .btn-primary{
+    appearance:none; border:1px solid var(--ink-strong); background:var(--ink-strong); color:#fff;
+    font-size:13.5px; font-weight:600; padding:10px 16px; border-radius:10px;
+    transition:transform .12s ease, background .12s ease;
+  }
+  .btn-primary:hover{background:#000}
+  .btn-primary:active{transform:translateY(1px)}
+  .btn-primary[disabled]{opacity:.5; cursor:default}
+
+  /* ---------- right: review ---------- */
+  .ledger{display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted)}
+  .ledger b{color:var(--ink); font-variant-numeric:tabular-nums}
+  .legend{display:flex; gap:12px; flex-wrap:wrap; margin:2px 0 14px; font-size:11.5px; color:var(--faint)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .swatch{width:10px; height:10px; border-radius:3px; display:inline-block}
+  .sw-proposed{background:var(--warn-line)} .sw-verified{background:var(--ok)} .sw-removed{background:var(--gone)}
+
+  .empty{
+    border:1px dashed var(--hair); border-radius:12px; padding:34px 22px; text-align:center;
+    color:var(--muted); font-size:13.5px;
+  }
+  .empty .big{display:block; font-size:15px; font-weight:600; color:var(--ink); margin-bottom:6px}
+
+  .section{margin-top:18px}
+  .section:first-child{margin-top:0}
+  .section-label{display:flex; align-items:center; gap:8px; margin-bottom:9px}
+  .section-count{font-size:11px; color:var(--faint); font-variant-numeric:tabular-nums}
+
+  .card{
+    border:1px solid var(--hair); border-left:3px solid var(--warn-line);
+    border-radius:11px; padding:13px 14px; margin-bottom:10px; background:var(--card);
+    transition:border-color .12s ease, background .12s ease;
+  }
+  .card.proposed.conf-high,.card.proposed.conf-medium{border-left-color:var(--hair)}
+  .card.approved,.card.edited{border-left-color:var(--ok)}
+  .card.removed{border-left-color:var(--gone); background:var(--gone-bg); opacity:.7}
+  .card.removed .card-main,.card.removed .evidence{display:none}
+
+  .card-main{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:11px}
+  .fg{display:flex; flex-direction:column; gap:4px; min-width:0}
+  .fg.wide{grid-column:1/-1}
+  .fg label{font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--faint)}
+  .fg input,.fg select,.fg textarea{
+    width:100%; font-size:13px; color:var(--ink); background:#FCFCFD;
+    border:1px solid var(--hair); border-radius:8px; padding:7px 9px;
+  }
+  .fg textarea{font-family:inherit; resize:vertical; min-height:38px; line-height:1.4}
+
+  .evidence{margin-top:10px; font-family:var(--mono); font-size:11.5px; color:var(--muted);
+            background:#FAFAFB; border:1px solid var(--hair); border-radius:7px; padding:7px 9px; word-break:break-word}
+  .evidence .lab{color:var(--faint); text-transform:uppercase; letter-spacing:.06em; font-size:10px; margin-right:6px}
+
+  .card-foot{display:flex; align-items:center; gap:8px; margin-top:11px; flex-wrap:wrap}
+  .conf{font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px; border:1px solid var(--hair); color:var(--muted)}
+  .conf.low{color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line)}
+  .tag{font-size:11px; color:var(--ok); font-weight:600}
+  .tag.removed{color:var(--gone)}
+  .spacer{margin-left:auto}
+  .btn-mini{
+    appearance:none; border:1px solid var(--hair); background:var(--card); color:var(--ink);
+    font-size:12px; font-weight:560; padding:6px 11px; border-radius:8px; transition:background .12s ease;
+  }
+  .btn-mini:hover{background:#F3F4F6}
+  .btn-mini.approve.active{background:var(--ok); border-color:var(--ok); color:#fff}
+  .btn-mini.approve.active:hover{background:#0b7a5e}
+
+  /* ---------- export ---------- */
+  .export-bar{display:flex; align-items:center; gap:12px; margin-top:18px; padding-top:16px; border-top:1px solid var(--hair); flex-wrap:wrap}
+  .export-note{font-size:12px; color:var(--faint)}
+  pre#exportOut{
+    margin-top:14px; max-height:300px; overflow:auto; font-family:var(--mono); font-size:11.5px;
+    background:#0F141B; color:#D6E2EE; border-radius:10px; padding:14px; line-height:1.5;
+  }
+  .hidden{display:none}
+
+  :focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="wordmark">Loop<span class="dot">.</span></span>
+    <span class="tagline">Encounter &rarr; reviewed follow-up, on your machine</span>
+  </div>
+  <span id="modeChip" class="chip">Local-first</span>
+  <span class="chip" title="No encounter text leaves this device. Demo runs on synthetic data only.">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
+    </svg>
+    Runs locally · synthetic data · no PHI
+  </span>
+</header>
+
+<main>
+  <!-- LEFT: the note -->
+  <section class="panel">
+    <div class="panel-head"><h2>Encounter note</h2></div>
+    <select id="sampleSelect" class="note-select" aria-label="Choose a synthetic encounter note"></select>
+    <textarea id="note" spellcheck="false" aria-label="Encounter note text"></textarea>
+    <div class="row">
+      <button id="extractBtn" class="btn-primary">Draft structured follow-up</button>
+      <span class="synthetic-note">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"></circle><path d="M12 8h.01M11 12h1v4h1"></path></svg>
+        Synthetic note — not real patient data
+      </span>
+    </div>
+  </section>
+
+  <!-- RIGHT: review -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Proposed follow-up</h2>
+      <div class="ledger"><span><b id="reviewedCount">0</b> / <b id="totalCount">0</b> reviewed</span></div>
+    </div>
+    <div class="legend">
+      <span><i class="swatch sw-proposed"></i>Proposed by model</span>
+      <span><i class="swatch sw-verified"></i>Approved / edited by you</span>
+      <span><i class="swatch sw-removed"></i>Removed</span>
+    </div>
+
+    <div id="results">
+      <div class="empty">
+        <span class="big">Nothing drafted yet</span>
+        Pick a synthetic note on the left and draft a follow-up.
+        Every item starts as a <em>proposal</em> — nothing is saved until you approve it.
+      </div>
+    </div>
+
+    <div id="exportBar" class="export-bar hidden">
+      <button id="exportBtn" class="btn-primary">Approve &amp; export verified plan</button>
+      <span class="export-note">Exports only what you approved or edited. Removed items are dropped.</span>
+    </div>
+    <pre id="exportOut" class="hidden"></pre>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const OPTIONS = {
+  status:   ["new","ongoing","resolved","worsening","improving"],
+  action:   ["started","stopped","increased","decreased","continued","held"],
+  urgency:  ["routine","soon","urgent"],
+  owner:    ["patient","clinic","physician"],
+};
+
+const SECTIONS = [
+  { key:"summary", label:"Summary", kind:"summary" },
+  { key:"problems", label:"Problems addressed", kind:"list",
+    fields:[ {n:"name",l:"Problem",t:"text",wide:true}, {n:"status",l:"Status",t:"select",o:"status"} ] },
+  { key:"medications", label:"Medication changes", kind:"list",
+    fields:[ {n:"drug",l:"Medication",t:"text",wide:true}, {n:"action",l:"Change",t:"select",o:"action"},
+             {n:"detail",l:"Dose / instructions",t:"text"} ] },
+  { key:"investigations", label:"Tests ordered", kind:"list",
+    fields:[ {n:"name",l:"Test",t:"text",wide:true}, {n:"reason",l:"Reason",t:"text"},
+             {n:"urgency",l:"Urgency",t:"select",o:"urgency"} ] },
+  { key:"referrals", label:"Referrals", kind:"list",
+    fields:[ {n:"specialty",l:"Refer to",t:"text",wide:true}, {n:"reason",l:"Reason",t:"text"},
+             {n:"urgency",l:"Urgency",t:"select",o:"urgency"} ] },
+  { key:"follow_up_tasks", label:"Follow-up tasks", kind:"list",
+    fields:[ {n:"task",l:"Task",t:"text",wide:true}, {n:"owner",l:"Owner",t:"select",o:"owner"},
+             {n:"timeframe",l:"When",t:"text"}, {n:"priority",l:"Priority",t:"select",o:"urgency"} ] },
+  { key:"patient_instructions", label:"Patient instructions", kind:"strings" },
+  { key:"safety_netting", label:"Safety netting", kind:"strings" },
+];
+
+let SAMPLES = [];
+let current = null;          // { mode, extraction }
+let state = {};              // key -> { status, data }
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "")
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+  .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
+// ---------- boot ----------
+(async function init(){
+  try{
+    const h = await (await fetch("/api/health")).json();
+    $("modeChip").textContent = h.force_mock ? "Mock mode (FORCE_MOCK)" : "Model: " + h.model;
+    if (h.force_mock) $("modeChip").classList.add("mode-mock");
+  }catch(e){ /* health is optional */ }
+
+  try{
+    SAMPLES = await (await fetch("/api/samples")).json();
+  }catch(e){ SAMPLES = []; }
+
+  const sel = $("sampleSelect");
+  SAMPLES.forEach((s,i)=>{
+    const o = document.createElement("option");
+    o.value = s.id; o.textContent = s.title; if(i===0) o.selected = true;
+    sel.appendChild(o);
+  });
+  if (SAMPLES.length) $("note").value = SAMPLES[0].note;
+
+  sel.addEventListener("change", ()=>{
+    const s = SAMPLES.find(x=>x.id===sel.value);
+    if (s) $("note").value = s.note;
+  });
+  $("extractBtn").addEventListener("click", runExtract);
+  $("exportBtn").addEventListener("click", runExport);
+  wireResultsDelegation();
+})();
+
+// ---------- extract ----------
+async function runExtract(){
+  const btn = $("extractBtn");
+  const note = $("note").value.trim();
+  if(!note){ return; }
+  btn.disabled = true; btn.textContent = "Drafting…";
+  try{
+    const sel = $("sampleSelect");
+    const matchesSample = SAMPLES.find(s=>s.id===sel.value && s.note===$("note").value);
+    const body = { note, sample_id: matchesSample ? sel.value : null };
+    const res = await fetch("/api/extract",{
+      method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)
+    });
+    current = await res.json();
+    setModeChip(current.mode);
+    initStateFromExtraction(current.extraction);
+    renderResults();
+    $("exportBar").classList.remove("hidden");
+    $("exportOut").classList.add("hidden");
+  }catch(e){
+    $("results").innerHTML =
+      '<div class="empty"><span class="big">Couldn’t reach the backend</span>'+
+      'Make sure the server is running, then try again.</div>';
+  }finally{
+    btn.disabled = false; btn.textContent = "Draft structured follow-up";
+  }
+}
+
+function setModeChip(mode){
+  const c = $("modeChip");
+  c.classList.remove("mode-mock","mode-local");
+  if(mode==="local-model"){ c.textContent="Drafted by local model"; c.classList.add("mode-local"); }
+  else { c.textContent="Drafted by mock (install Ollama for real extraction)"; c.classList.add("mode-mock"); }
+}
+
+// ---------- state ----------
+function initStateFromExtraction(ex){
+  state = {};
+  state["summary:0"] = { status:"proposed", data:{ summary: ex.summary || "" } };
+  for(const sec of SECTIONS){
+    if(sec.kind==="list"){
+      (ex[sec.key]||[]).forEach((item,i)=>{ state[sec.key+":"+i] = { status:"proposed", data:{...item} }; });
+    }else if(sec.kind==="strings"){
+      (ex[sec.key]||[]).forEach((str,i)=>{ state[sec.key+":"+i] = { status:"proposed", data:{ text:str } }; });
+    }
+  }
+}
+
+const isReviewed = (st)=> st==="approved" || st==="edited" || st==="removed";
+
+function updateLedger(){
+  const keys = Object.keys(state);
+  const reviewed = keys.filter(k=>isReviewed(state[k].status)).length;
+  $("reviewedCount").textContent = reviewed;
+  $("totalCount").textContent = keys.length;
+}
+
+// ---------- render ----------
+function confChip(conf){
+  if(!conf) return "";
+  const cls = conf==="low" ? "conf low" : "conf";
+  const txt = conf==="low" ? "Low confidence" : (conf.charAt(0).toUpperCase()+conf.slice(1));
+  return `<span class="${cls}">${esc(txt)}</span>`;
+}
+
+function fieldHtml(key, f, val){
+  if(f.t==="select"){
+    const opts = OPTIONS[f.o].map(o=>`<option value="${o}" ${o===val?"selected":""}>${o}</option>`).join("");
+    return `<div class="fg ${f.wide?'wide':''}"><label>${esc(f.l)}</label>
+            <select data-key="${key}" data-field="${f.n}">${opts}</select></div>`;
+  }
+  return `<div class="fg ${f.wide?'wide':''}"><label>${esc(f.l)}</label>
+          <input type="text" data-key="${key}" data-field="${f.n}" value="${esc(val)}" /></div>`;
+}
+
+function cardHtml(sec, key){
+  const st = state[key]; const d = st.data;
+  const conf = d.confidence;
+  const classes = ["card", st.status];
+  if(conf) classes.push("conf-"+conf);
+  const approved = st.status==="approved";
+  const removed = st.status==="removed";
+
+  let main = "";
+  if(sec.kind==="summary"){
+    main = `<div class="card-main"><div class="fg wide"><label>One-line summary</label>
+            <textarea data-key="${key}" data-field="summary">${esc(d.summary)}</textarea></div></div>`;
+  }else if(sec.kind==="strings"){
+    main = `<div class="card-main"><div class="fg wide"><label>Instruction</label>
+            <textarea data-key="${key}" data-field="text">${esc(d.text)}</textarea></div></div>`;
+  }else{
+    main = `<div class="card-main">${sec.fields.map(f=>fieldHtml(key,f,d[f.n])).join("")}</div>`;
+  }
+
+  const evidence = d.evidence
+    ? `<div class="evidence"><span class="lab">from note</span>${esc(d.evidence)}</div>` : "";
+
+  let tag = "";
+  if(st.status==="edited") tag = `<span class="tag">Edited</span>`;
+  if(removed) tag = `<span class="tag removed">Removed</span>`;
+
+  const approveBtn = `<button class="btn-mini approve ${approved?'active':''}" data-action="approve" data-key="${key}">
+                        ${approved?'Verified ✓':'Approve'}</button>`;
+  const removeBtn = removed
+    ? `<button class="btn-mini" data-action="restore" data-key="${key}">Restore</button>`
+    : `<button class="btn-mini" data-action="remove" data-key="${key}">Remove</button>`;
+
+  return `<div class="${classes.join(' ')}" data-key="${key}">
+            ${main}${evidence}
+            <div class="card-foot">${confChip(conf)}${tag}<span class="spacer"></span>${approveBtn}${removeBtn}</div>
+          </div>`;
+}
+
+function renderResults(){
+  const root = $("results");
+  if(!current){ return; }
+  let html = "";
+  for(const sec of SECTIONS){
+    const keys = Object.keys(state).filter(k=>k.startsWith(sec.key+":"))
+                  .sort((a,b)=>(+a.split(":")[1])-(+b.split(":")[1]));
+    if(sec.kind==="summary" && !state["summary:0"]) continue;
+    if(sec.kind!=="summary" && keys.length===0) continue;
+    const useKeys = sec.kind==="summary" ? ["summary:0"] : keys;
+    html += `<div class="section"><div class="section-label">
+               <span class="eyebrow">${esc(sec.label)}</span>
+               ${sec.kind!=="summary"?`<span class="section-count">${useKeys.length}</span>`:""}
+             </div>${useKeys.map(k=>cardHtml(sec,k)).join("")}</div>`;
+  }
+  root.innerHTML = html;
+  updateLedger();
+}
+
+// ---------- interaction (event delegation) ----------
+function wireResultsDelegation(){
+  const root = $("results");
+
+  // typing / selecting: update state, mark edited, keep focus (no full re-render on input)
+  const onEdit = (e)=>{
+    const el = e.target.closest("[data-key][data-field]");
+    if(!el) return;
+    const key = el.dataset.key, field = el.dataset.field;
+    if(!state[key]) return;
+    state[key].data[field] = el.value;
+    if(state[key].status!=="removed") state[key].status = "edited";
+    updateLedger();
+    if(e.type==="change") renderResults();     // re-render on blur/select to refresh chrome
+  };
+  root.addEventListener("input", onEdit);
+  root.addEventListener("change", onEdit);
+
+  root.addEventListener("click", (e)=>{
+    const b = e.target.closest("[data-action]");
+    if(!b) return;
+    const key = b.dataset.key, action = b.dataset.action;
+    if(!state[key]) return;
+    if(action==="approve") state[key].status = state[key].status==="approved" ? "proposed" : "approved";
+    else if(action==="remove") state[key].status = "removed";
+    else if(action==="restore") state[key].status = "proposed";
+    renderResults();
+  });
+}
+
+// ---------- export ----------
+function runExport(){
+  const proposedLeft = Object.keys(state).filter(k=>state[k].status==="proposed").length;
+  if(proposedLeft>0){
+    const ok = confirm(`${proposedLeft} item(s) haven’t been reviewed yet. Export the approved/edited ones anyway?`);
+    if(!ok) return;
+  }
+
+  const verified = { summary:"", problems:[], medications:[], investigations:[],
+                     referrals:[], follow_up_tasks:[], patient_instructions:[], safety_netting:[] };
+
+  for(const sec of SECTIONS){
+    if(sec.kind==="summary"){
+      const st = state["summary:0"];
+      if(st && st.status!=="removed") verified.summary = st.data.summary;
+      continue;
+    }
+    const keys = Object.keys(state).filter(k=>k.startsWith(sec.key+":"))
+                  .sort((a,b)=>(+a.split(":")[1])-(+b.split(":")[1]));
+    for(const k of keys){
+      const st = state[k];
+      if(st.status==="removed") continue;
+      if(sec.kind==="strings") verified[sec.key].push(st.data.text);
+      else verified[sec.key].push({...st.data, clinician_status: st.status});
+    }
+  }
+
+  const counts = { approved:0, edited:0, removed:0, proposed:0 };
+  Object.values(state).forEach(s=>counts[s.status]++);
+
+  const out = {
+    reviewed_at: new Date().toISOString(),
+    drafted_by: current ? current.mode : "unknown",
+    source_note_excerpt: ($("note").value || "").slice(0,180) + "…",
+    audit: { total_items: Object.keys(state).length, ...counts },
+    verified
+  };
+
+  const text = JSON.stringify(out, null, 2);
+  const pre = $("exportOut");
+  pre.textContent = text; pre.classList.remove("hidden");
+  pre.scrollIntoView({behavior:"smooth", block:"nearest"});
+
+  const blob = new Blob([text], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "verified-followup.json";
+  a.click(); URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>

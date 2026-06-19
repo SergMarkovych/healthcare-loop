@@ -1,0 +1,87 @@
+[
+  {
+    "resourceType": "Patient",
+    "id": "synthetic-A",
+    "meta": {"versionId": "2", "lastUpdated": "2026-06-15T08:00:00Z"},
+    "name": [{"use": "official", "family": "Sample", "given": ["Jordan"]}],
+    "gender": "male",
+    "birthDate": "1968-03-12"
+  },
+  {
+    "resourceType": "Condition",
+    "id": "cond-A1",
+    "meta": {"versionId": "2", "lastUpdated": "2026-06-15T08:00:00Z"},
+    "clinicalStatus": {"coding": [{"code": "active"}]},
+    "code": {"text": "Type 2 diabetes mellitus"},
+    "subject": {"reference": "Patient/synthetic-A"}
+  },
+  {
+    "resourceType": "MedicationRequest",
+    "id": "med-A1",
+    "meta": {"versionId": "2", "lastUpdated": "2026-06-15T08:00:00Z"},
+    "status": "active",
+    "intent": "order",
+    "medicationCodeableConcept": {"text": "Metformin"},
+    "subject": {"reference": "Patient/synthetic-A"},
+    "dosageInstruction": [{"text": "1000 mg twice daily"}]
+  },
+  {
+    "resourceType": "Observation",
+    "id": "obs-A1",
+    "meta": {"versionId": "3", "lastUpdated": "2026-06-15T08:00:00Z"},
+    "status": "final",
+    "code": {"text": "Hemoglobin A1c"},
+    "subject": {"reference": "Patient/synthetic-A"},
+    "valueQuantity": {"value": 8.4, "unit": "%"}
+  },
+  {
+    "resourceType": "Observation",
+    "id": "obs-A2",
+    "meta": {"versionId": "1", "lastUpdated": "2026-06-14T09:30:00Z"},
+    "status": "final",
+    "code": {"text": "Creatinine"},
+    "subject": {"reference": "Patient/synthetic-A"},
+    "valueQuantity": {"value": 92, "unit": "umol/L"}
+  },
+  {
+    "resourceType": "Encounter",
+    "id": "enc-A1",
+    "meta": {"versionId": "2", "lastUpdated": "2026-06-15T08:00:00Z"},
+    "status": "finished",
+    "subject": {"reference": "Patient/synthetic-A"},
+    "period": {"start": "2026-05-01"}
+  },
+  {
+    "resourceType": "Patient",
+    "id": "synthetic-B",
+    "meta": {"versionId": "2", "lastUpdated": "2026-06-15T08:05:00Z"},
+    "name": [{"use": "official", "family": "Demo", "given": ["Alex"]}],
+    "gender": "female",
+    "birthDate": "1985-07-22"
+  },
+  {
+    "resourceType": "Condition",
+    "id": "cond-B1",
+    "meta": {"versionId": "2", "lastUpdated": "2026-06-15T08:05:00Z"},
+    "clinicalStatus": {"coding": [{"code": "active"}]},
+    "code": {"text": "Essential hypertension"},
+    "subject": {"reference": "Patient/synthetic-B"}
+  },
+  {
+    "resourceType": "Encounter",
+    "id": "enc-B1",
+    "meta": {"versionId": "2", "lastUpdated": "2026-06-15T08:05:00Z"},
+    "status": "finished",
+    "subject": {"reference": "Patient/synthetic-B"},
+    "period": {"start": "2026-05-02"}
+  },
+  {
+    "resourceType": "Task",
+    "id": "task-B1",
+    "meta": {"versionId": "1", "lastUpdated": "2026-06-14T16:00:00Z"},
+    "status": "requested",
+    "intent": "order",
+    "description": "Patient to bring home blood pressure log to next visit",
+    "for": {"reference": "Patient/synthetic-B"}
+  }
+]

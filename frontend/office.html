@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Digital Office Assistant — Loop</title>
+<style>
+  :root{
+    --paper:#F5F6F8; --card:#FFFFFF; --ink:#1A2330; --ink-2:#101620;
+    --muted:#5A6675; --faint:#8B95A3; --hair:#DDE2E9;
+    --teal:#0E8A6B; --teal-bg:#E5F4EE;
+    --amber:#9A6B14; --amber-bg:#FBF1DC; --amber-line:#E0C079;
+    --slate:#3E5C8A; --slate-bg:#E8EEF7;
+    --focus:#2D6CDF;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{font-family:var(--sans); color:var(--ink); background:var(--paper); -webkit-font-smoothing:antialiased; line-height:1.45}
+  .eyebrow{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+
+  header{position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:13px 20px; background:rgba(245,246,248,.9); backdrop-filter:blur(8px); border-bottom:1px solid var(--hair)}
+  .brand{margin-right:auto; display:flex; align-items:baseline; gap:10px}
+  .wordmark{font-size:18px; font-weight:680; letter-spacing:-.02em; color:var(--ink-2)}
+  .wordmark .dot{color:var(--teal)}
+  .sub{font-size:13px; color:var(--muted)}
+  .chip{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:560; padding:5px 10px;
+    border-radius:999px; border:1px solid var(--hair); background:var(--card); color:var(--muted); white-space:nowrap}
+
+  main{max-width:1180px; margin:0 auto; padding:18px 20px 60px}
+
+  /* metrics strip */
+  .metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px}
+  @media(max-width:760px){.metrics{grid-template-columns:repeat(2,1fr)}}
+  .metric{background:var(--card); border:1px solid var(--hair); border-radius:13px; padding:14px 16px}
+  .metric .num{font-size:clamp(22px,4vw,30px); font-weight:720; letter-spacing:-.02em; color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .metric .lbl{font-size:12px; color:var(--muted); margin-top:2px}
+  .metric.accent .num{color:var(--teal)}
+
+  .grid{display:grid; grid-template-columns:1fr 1.05fr; gap:18px; align-items:start}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--card); border:1px solid var(--hair); border-radius:14px; padding:16px}
+  .panel h2{margin:0 0 4px; font-size:15px; font-weight:640}
+  .panel .hint{font-size:12.5px; color:var(--muted); margin:0 0 12px}
+
+  /* request cards */
+  .req{border:1px solid var(--hair); border-left:3px solid var(--hair); border-radius:11px; padding:12px 13px; margin-bottom:10px; transition:opacity .15s}
+  .req.done{opacity:.55}
+  .req.r-eliminate,.req.r-automate{border-left-color:var(--teal)}
+  .req.r-physician_review{border-left-color:var(--amber-line)}
+  .req.r-delegate{border-left-color:var(--slate)}
+  .req-top{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+  .req-title{font-weight:620; font-size:14.5px}
+  .route{font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; letter-spacing:.02em}
+  .route.eliminate,.route.automate{color:var(--teal); background:var(--teal-bg)}
+  .route.physician_review{color:var(--amber); background:var(--amber-bg); border:1px solid var(--amber-line)}
+  .route.delegate{color:var(--slate); background:var(--slate-bg)}
+  .req-reason{font-size:12.5px; color:var(--muted); margin:7px 0 0}
+  .req-meta{display:flex; align-items:center; gap:14px; margin-top:9px; font-size:12px; color:var(--faint); flex-wrap:wrap}
+  .req-meta b{color:var(--ink); font-weight:600}
+  .req-actions{margin-top:11px; display:flex; gap:8px; align-items:center}
+  .done-tag{font-size:12px; color:var(--teal); font-weight:600}
+
+  button{font-family:inherit; cursor:pointer}
+  .btn{appearance:none; border:1px solid var(--ink-2); background:var(--ink-2); color:#fff; font-size:13px; font-weight:600;
+    padding:8px 14px; border-radius:9px; transition:background .12s}
+  .btn:hover{background:#000}
+  .btn.ghost{background:var(--card); color:var(--ink); border-color:var(--hair)}
+  .btn.ghost:hover{background:#F1F3F6}
+  .btn[disabled]{opacity:.5; cursor:default}
+
+  /* form review */
+  .empty{border:1px dashed var(--hair); border-radius:12px; padding:30px 20px; text-align:center; color:var(--muted); font-size:13.5px}
+  .empty .big{display:block; font-size:15px; font-weight:600; color:var(--ink); margin-bottom:5px}
+  .form-title{font-weight:640; font-size:15px; margin-bottom:3px}
+  .form-sub{font-size:12.5px; color:var(--muted); margin-bottom:13px}
+  .field{border:1px solid var(--hair); border-radius:10px; padding:11px 12px; margin-bottom:10px}
+  .field.md{border-left:3px solid var(--amber-line); background:#FFFCF5}
+  .field.auto{border-left:3px solid var(--teal)}
+  .field label{display:block; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--faint); margin-bottom:5px}
+  .field input,.field textarea{width:100%; font-family:inherit; font-size:13.5px; color:var(--ink); border:1px solid var(--hair);
+    border-radius:8px; padding:8px 10px; background:#FCFCFD}
+  .field textarea{resize:vertical; min-height:40px; line-height:1.4}
+  .field .prov{display:flex; align-items:center; gap:8px; margin-top:7px; font-size:11px; color:var(--muted); flex-wrap:wrap}
+  .conf{font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:999px; border:1px solid var(--hair); color:var(--muted)}
+  .conf.low{color:var(--amber); background:var(--amber-bg); border-color:var(--amber-line)}
+  .ev{font-family:var(--mono); font-size:11px; color:var(--muted)}
+  .md-hint{font-size:11px; color:var(--amber); font-weight:600}
+
+  .result{margin-top:12px; border:1px solid var(--teal); background:var(--teal-bg); border-radius:11px; padding:13px}
+  .result .rt{font-weight:650; font-size:13.5px; color:#0b5e49; margin-bottom:7px; display:flex; align-items:center; gap:7px}
+  .result pre{margin:0; font-family:var(--mono); font-size:11.5px; white-space:pre-wrap; color:var(--ink); background:var(--card); border:1px solid var(--hair); border-radius:8px; padding:11px}
+  .task{margin-top:9px; font-size:12.5px; color:var(--ink)}
+  .task b{color:var(--teal)}
+
+  :focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="wordmark">Loop<span class="dot">.</span> Office Assistant</span>
+    <span class="sub">Triage the inbox · auto-prepare paperwork · keep the physician on the clinical part</span>
+  </div>
+  <span id="modeChip" class="chip">Local-first</span>
+  <span class="chip" title="Synthetic data only · no PHI leaves this device">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+    Synthetic · local · no PHI
+  </span>
+</header>
+
+<main>
+  <div class="metrics">
+    <div class="metric accent"><div class="num" id="mMin">0</div><div class="lbl">minutes saved this session</div></div>
+    <div class="metric"><div class="num" id="mTouch">0</div><div class="lbl">physician touchpoints avoided</div></div>
+    <div class="metric"><div class="num" id="mHours">0</div><div class="lbl">projected hrs/yr per physician</div></div>
+    <div class="metric"><div class="num" id="mFte">0</div><div class="lbl">projected FTE per 100 physicians</div></div>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Incoming requests</h2>
+      <p class="hint">The necessity gate routes each item first — only what truly needs a physician reaches you.</p>
+      <div id="queue"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Form review</h2>
+      <p class="hint">Chart-derived fields are pre-filled with evidence. Clinical-judgement fields are left for you — never invented.</p>
+      <div id="review">
+        <div class="empty"><span class="big">Nothing to review yet</span>
+          Pick a <em>Physician review</em> request and prepare its form. Everything else is handled without you.</div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+"use strict";
+const $ = (id)=>document.getElementById(id);
+const esc = (s)=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+let QUEUE = [];
+const processed = {};   // id -> {category, route}
+
+(async function init(){
+  try{ const h = await (await fetch("/api/health")).json();
+       $("modeChip").textContent = h.force_mock ? "Mock mode" : "Model: " + h.model; }catch(e){}
+  try{ QUEUE = await (await fetch("/api/office/requests")).json(); }catch(e){ QUEUE=[]; }
+  renderQueue();
+})();
+
+const ROUTE_LABEL = {eliminate:"Eliminate", delegate:"Delegate", automate:"Automate", physician_review:"Physician review"};
+const ACTION_LABEL = {
+  eliminate:"Send patient attestation",
+  delegate:(w)=>"Route to "+w,
+  automate:"Generate for signature",
+  physician_review:"Prepare form",
+};
+
+function renderQueue(){
+  const root = $("queue");
+  root.innerHTML = QUEUE.map(req=>{
+    const done = !!processed[req.id];
+    const m = req.metrics;
+    const actLabel = req.route==="delegate" ? ACTION_LABEL.delegate(req.who) : ACTION_LABEL[req.route];
+    const actions = done
+      ? `<span class="done-tag">✓ Handled${req.route!=="physician_review"?" · auto":""}</span>`
+      : `<button class="btn${req.route==="physician_review"?"":" ghost"}" data-act="${req.id}">${esc(actLabel)}</button>`;
+    return `<div class="req r-${req.route} ${done?'done':''}" data-id="${req.id}">
+      <div class="req-top"><span class="req-title">${esc(req.title)}</span>
+        <span class="route ${req.route}">${ROUTE_LABEL[req.route]}</span></div>
+      <p class="req-reason">${esc(req.reason)}</p>
+      <div class="req-meta"><span>Handled by <b>${esc(req.who)}</b></span>
+        <span>Saves <b>${m.saved_minutes} min</b></span>
+        ${m.touchpoint_avoided?`<span><b>1</b> physician touch avoided</span>`:``}</div>
+      <div class="req-actions">${actions}</div>
+    </div>`;
+  }).join("");
+  root.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click", ()=>onAction(b.dataset.act)));
+}
+
+function onAction(id){
+  const req = QUEUE.find(r=>r.id===id);
+  if(!req) return;
+  if(req.route==="physician_review") return prepareForm(req);
+  // non-physician routes resolve immediately
+  markDone(req);
+  renderQueue();
+  showHandled(req);
+}
+
+async function prepareForm(req){
+  $("review").innerHTML = `<div class="empty">Preparing ${esc(req.title)}…</div>`;
+  let data;
+  try{ data = await (await fetch("/api/office/prefill",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({request_id:req.id})})).json(); }
+  catch(e){ $("review").innerHTML = `<div class="empty">Couldn't reach the backend.</div>`; return; }
+  if(data.status!=="ok"){ $("review").innerHTML = `<div class="empty">${esc(data.message||"No form for this request.")}</div>`; return; }
+  renderForm(req, data);
+}
+
+function renderForm(req, data){
+  const f = data.form;
+  const fields = f.fields.map(fld=>{
+    const isMd = fld.needs_physician;
+    const big = ["functional_limitations","prognosis","work_capacity","school_capacity"].includes(fld.id);
+    const control = big
+      ? `<textarea data-fid="${fld.id}" placeholder="${isMd?'Your clinical judgement…':''}">${esc(fld.value)}</textarea>`
+      : `<input type="text" data-fid="${fld.id}" value="${esc(fld.value)}" placeholder="${isMd?'Confirm from chart…':''}"/>`;
+    const prov = isMd
+      ? `<div class="prov"><span class="md-hint">Requires your clinical judgement</span></div>`
+      : `<div class="prov"><span class="conf ${fld.confidence==='low'?'low':''}">${esc(fld.confidence)} confidence</span>
+         ${fld.evidence?`<span class="ev">from note: ${esc(fld.evidence)}</span>`:``}</div>`;
+    return `<div class="field ${isMd?'md':'auto'}"><label>${esc(fld.label)}</label>${control}${prov}</div>`;
+  }).join("");
+
+  $("review").innerHTML = `
+    <div class="form-title">${esc(f.title)}</div>
+    <div class="form-sub">${f.auto_filled} field(s) pre-filled from the chart · ${f.physician_fields} for your review
+      · drafted by ${data.mode==='local-model'?'local model':'mock'}</div>
+    ${fields}
+    <div class="req-actions"><button class="btn" id="approveBtn">Approve &amp; generate draft + task</button></div>
+    <div id="formResult"></div>`;
+  $("approveBtn").addEventListener("click", ()=>approveForm(req, data));
+}
+
+function approveForm(req, data){
+  const vals = {};
+  $("review").querySelectorAll("[data-fid]").forEach(el=>vals[el.dataset.fid]=el.value);
+  const lines = data.form.fields.map(fld=>`${fld.label}: ${vals[fld.id]||"—"}`);
+  const draft = `FORM — ${data.form.title}\n${"-".repeat(40)}\n${lines.join("\n")}`;
+  $("formResult").innerHTML = `
+    <div class="result">
+      <div class="rt"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+        Draft generated — ready for your signature</div>
+      <pre>${esc(draft)}</pre>
+      <div class="task">↳ <b>Task created:</b> file completed “${esc(data.form.title)}” and notify ${esc(data.patient_context.name||"the patient")}.</div>
+    </div>`;
+  markDone(req);
+  renderQueue();
+  $("approveBtn").disabled = true; $("approveBtn").textContent = "Approved ✓";
+}
+
+function showHandled(req){
+  let body = "";
+  if(req.route==="eliminate")
+    body = `Patient attestation issued — no physician certification required.`;
+  else if(req.route==="automate")
+    body = `${req.title} generated and queued for signature.`;
+  else
+    body = `Routed to ${req.who}.`;
+  $("review").innerHTML = `<div class="result"><div class="rt">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+    Handled without you — ${ROUTE_LABEL[req.route].toLowerCase()}</div>
+    <pre>${esc(body)}</pre>
+    <div class="task">↳ <b>${req.metrics.saved_minutes} minutes</b> kept off the physician's plate.</div></div>`;
+}
+
+function markDone(req){
+  processed[req.id] = {category:req.category, route:req.route};
+  updateMetrics();
+}
+
+async function updateMetrics(){
+  const items = Object.values(processed);
+  let min=0, touch=0;
+  for(const id in processed){ const r=QUEUE.find(q=>q.id===id); if(r){min+=r.metrics.saved_minutes; touch+=r.metrics.touchpoint_avoided;} }
+  $("mMin").textContent = min; $("mTouch").textContent = touch;
+  try{
+    const proj = await (await fetch("/api/office/metrics",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({processed:items})})).json();
+    $("mHours").textContent = proj.projected_annual_hours_per_physician ?? 0;
+    $("mFte").textContent = proj.projected_fte_per_100_physicians ?? 0;
+  }catch(e){}
+}
+</script>
+</body>
+</html>
