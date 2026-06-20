@@ -1,0 +1,67 @@
+{
+  "sources": [
+    {
+      "id": "fixtures",
+      "type": "fhir",
+      "status": "active",
+      "base_url": null,
+      "notes": "Offline synthetic FHIR scans (scan_1.json / scan_2.json). Deterministic; no network. Default scan source."
+    },
+    {
+      "id": "hapi-public",
+      "type": "fhir",
+      "status": "active",
+      "base_url": "https://hapi.fhir.org/baseR4",
+      "notes": "Public HAPI FHIR R4 test server. Default live FHIR_BASE_URL."
+    },
+    {
+      "id": "hapi-local",
+      "type": "fhir",
+      "status": "active",
+      "base_url": "http://localhost:8080/fhir",
+      "notes": "Local HAPI FHIR server (e.g. Synthea-loaded). Active when running locally."
+    },
+    {
+      "id": "smart-on-fhir",
+      "type": "fhir-auth",
+      "status": "roadmap",
+      "base_url": null,
+      "notes": "SMART-on-FHIR OAuth2 launch for real EHR sandboxes. Not wired yet."
+    },
+    {
+      "id": "cds-hooks",
+      "type": "decision-support",
+      "status": "roadmap",
+      "base_url": null,
+      "notes": "CDS Hooks service integration for workflow-triggered cards. Not wired yet."
+    },
+    {
+      "id": "health-canada-dpd",
+      "type": "drug-reference",
+      "status": "roadmap",
+      "base_url": null,
+      "notes": "Health Canada Drug Product Database. Reference lookup, not patient data."
+    },
+    {
+      "id": "ccdd",
+      "type": "terminology",
+      "status": "roadmap",
+      "base_url": null,
+      "notes": "Canadian Clinical Drug Data set. Terminology/coding reference."
+    },
+    {
+      "id": "mimic-iv",
+      "type": "dataset",
+      "status": "roadmap",
+      "base_url": null,
+      "notes": "MIMIC-IV critical-care dataset. Research/eval corpus, credentialed access."
+    },
+    {
+      "id": "mtsamples",
+      "type": "dataset",
+      "status": "roadmap",
+      "base_url": null,
+      "notes": "MTSamples transcribed clinical notes. Text corpus for extraction eval."
+    }
+  ]
+}

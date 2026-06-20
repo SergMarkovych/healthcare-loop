@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from backend import llm
 from backend.board import service as board_service
 from backend.fhir import service as fhir_service
+from backend.fhir import sources as fhir_sources
 from backend.office import service as office_service
 from backend.synthetic_data import SAMPLES
 
@@ -95,6 +96,16 @@ def fhir_diff() -> dict:
 @app.get("/api/fhir/patients")
 def fhir_patients() -> list[dict]:
     return fhir_service.list_patients_latest()
+
+
+@app.get("/api/fhir/activity")
+def fhir_activity() -> list[dict]:
+    return fhir_service.patient_activity()
+
+
+@app.get("/api/sources")
+def sources() -> list[dict]:
+    return fhir_sources.load_sources()
 
 
 @app.get("/api/fhir/context/{patient_id}")

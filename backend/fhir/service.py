@@ -216,6 +216,96 @@ def build_context(patient_id: str) -> dict:
     return {"status": "ok", "mode": mode, "board": board}
 
 
+# §17.1 Patient Activity List ------------------------------------------------
+
+# Open-workflow status set, mirroring summarize.py:33 so the activity inbox and
+# the per-patient board agree on what "open" means.
+_WORKFLOW_OPEN = {"active", "requested", "in-progress", "on-hold", "received", "accepted"}
+_WORKFLOW_TYPES = ("Task", "ServiceRequest")
+
+
+def _data_attention(change_volume: int) -> str:
+    """Map total change volume to a data/workflow attention label.
+
+    This is DATA/WORKFLOW attention (how much the FHIR API surface moved since the
+    last scan), NEVER clinical risk or disease severity. 0 -> Low, 1-2 -> Medium,
+    3+ -> High (V4 §17.1 + §23).
+    """
+    if change_volume >= 3:
+        return "High"
+    if change_volume >= 1:
+        return "Medium"
+    return "Low"
+
+
+def _latest_scan_timestamp(conn) -> str | None:
+    """completed_at (fallback started_at) of the most recent scan_run, or None."""
+    row = conn.execute(
+        "SELECT completed_at, started_at FROM scan_run ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    if row is None:
+        return None
+    return row["completed_at"] or row["started_at"]
+
+
+def patient_activity() -> list[dict]:
+    """Per-patient activity rows for the latest scan (V4 §17.1).
+
+    Each row: {id, name, new, updated, not_returned, open_workflow, last_scan,
+    data_attention}. Counts come from diff_last_two() filtered per patient
+    (reusing diff.filter_for_patient), so they match /api/fhir/diff. open_workflow
+    counts open Task/ServiceRequest for the patient in the latest scan. last_scan
+    is the latest scan_run timestamp. Returns [] when no scans exist.
+    """
+    conn = store.connect()
+    try:
+        _, curr_id = store.last_two_scan_ids(conn)
+        if curr_id is None:
+            return []
+        last_scan = _latest_scan_timestamp(conn)
+        curr_rows = list(store.load_snapshot_map(conn, curr_id).values())
+    finally:
+        conn.close()
+
+    bodies = [json.loads(r["body"]) for r in curr_rows]
+
+    patients = [b for b in bodies if b.get("resourceType") == "Patient"]
+    open_by_patient: dict[str, int] = {}
+    for b in bodies:
+        if b.get("resourceType") not in _WORKFLOW_TYPES:
+            continue
+        if (b.get("status") or "").lower() not in _WORKFLOW_OPEN:
+            continue
+        pid = norm.patient_ref(b)
+        if pid is not None:
+            open_by_patient[pid] = open_by_patient.get(pid, 0) + 1
+
+    full = diff_last_two()
+    diff = full["diff"] if full.get("status") == "ok" else None
+
+    rows: list[dict] = []
+    for p in patients:
+        pid = p.get("id")
+        if diff is not None:
+            pdiff = diffmod.filter_for_patient(diff, pid)
+            new = pdiff["counts"].get("new", 0)
+            updated = pdiff["counts"].get("updated", 0)
+            not_returned = pdiff["counts"].get("not_returned", 0)
+        else:
+            new = updated = not_returned = 0
+        rows.append({
+            "id": pid,
+            "name": _name(p),
+            "new": new,
+            "updated": updated,
+            "not_returned": not_returned,
+            "open_workflow": open_by_patient.get(pid, 0),
+            "last_scan": last_scan,
+            "data_attention": _data_attention(new + updated + not_returned),
+        })
+    return rows
+
+
 def current_resources_for_patient(patient_id: str) -> tuple[dict | None, list[dict]]:
     """Latest-scan resources for one patient: (patient_resource, all_resources).
 
