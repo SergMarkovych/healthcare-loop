@@ -21,6 +21,7 @@ from backend.fhir import service as fhir_service
 from backend.fhir import sources as fhir_sources
 from backend.fhir import writer as fhir_writer
 from backend.office import service as office_service
+from backend.office import summarizer as office_summarizer
 from backend.office import verifier as office_verifier
 from backend.synthetic_data import SAMPLES
 from backend.transcribe import router as transcribe_router
@@ -194,6 +195,10 @@ class MetricsRequest(BaseModel):
     processed: list[dict] = []
 
 
+class SummarizeRequest(BaseModel):
+    text: str
+
+
 @app.get("/api/office/requests")
 def office_requests() -> list[dict]:
     return office_service.get_queue()
@@ -222,6 +227,11 @@ def office_handout(request_id: str) -> dict:
 @app.post("/api/office/verify")
 def office_verify(req: office_verifier.VerifyRequest) -> office_verifier.VerifyResult:
     return office_verifier.verify(req)
+
+
+@app.post("/api/office/summarize")
+def office_summarize(req: SummarizeRequest) -> office_summarizer.OfficeSummary:
+    return office_summarizer.summarize(req.text)
 
 
 # --- Actions: close the loop by writing the approved item back to FHIR ---
