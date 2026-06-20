@@ -22,8 +22,10 @@ from backend.fhir import sources as fhir_sources
 from backend.fhir import writer as fhir_writer
 from backend.office import service as office_service
 from backend.synthetic_data import SAMPLES
+from backend.transcribe import router as transcribe_router
 
 app = FastAPI(title="Loop — follow-up co-pilot (scaffold)")
+app.include_router(transcribe_router)
 
 _FRONTEND = Path(__file__).resolve().parent.parent / "frontend" / "index.html"
 
