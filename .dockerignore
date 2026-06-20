@@ -1,0 +1,14 @@
+.git/
+.gitignore
+.gitattributes
+.venv/
+venv/
+**/__pycache__/
+*.pyc
+*.db
+backend/fhir/snapshots.db
+tests/
+docs/
+scripts/
+*.md
+.scope-contract*.json

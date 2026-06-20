@@ -1,0 +1,23 @@
+# Run on any machine with Docker:
+#   docker compose up --build         -> http://localhost:8000/board  (offline, synthetic)
+#   docker compose --profile live up  -> also starts a local HAPI FHIR server on :8080
+services:
+  app:
+    build: .
+    image: healthcare-loop:latest
+    ports:
+      - "8000:8000"
+    environment:
+      FORCE_MOCK: "1"               # office extractor uses the deterministic mock (no Ollama)
+      FORCE_DETERMINISTIC: "1"      # board summary stays deterministic / offline
+      # Live FHIR mode (with the hapi service below + --profile live):
+      # FHIR_BASE_URL: "http://hapi:8080/fhir"
+    restart: unless-stopped
+
+  # Optional local FHIR server for the live scan/diff demo. Off by default.
+  hapi:
+    image: hapiproject/hapi:latest
+    ports:
+      - "8080:8080"
+    profiles: ["live"]
+    restart: unless-stopped
