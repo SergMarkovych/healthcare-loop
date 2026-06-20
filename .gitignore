@@ -8,3 +8,4 @@ venv/
 backend/fhir/snapshots.db
 *.db
 docs/
+Temp/
