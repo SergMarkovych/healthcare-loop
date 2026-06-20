@@ -21,6 +21,7 @@ from backend.fhir import service as fhir_service
 from backend.fhir import sources as fhir_sources
 from backend.fhir import writer as fhir_writer
 from backend.office import service as office_service
+from backend.office import verifier as office_verifier
 from backend.synthetic_data import SAMPLES
 from backend.transcribe import router as transcribe_router
 
@@ -216,6 +217,11 @@ def office_metrics(req: MetricsRequest) -> dict:
 @app.get("/api/office/handout/{request_id}")
 def office_handout(request_id: str) -> dict:
     return office_service.build_handout_for(request_id)
+
+
+@app.post("/api/office/verify")
+def office_verify(req: office_verifier.VerifyRequest) -> office_verifier.VerifyResult:
+    return office_verifier.verify(req)
 
 
 # --- Actions: close the loop by writing the approved item back to FHIR ---
