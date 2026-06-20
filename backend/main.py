@@ -121,6 +121,13 @@ def extract(req: ExtractRequest) -> dict:
     return {"mode": mode, "extraction": extraction.model_dump()}
 
 
+@app.get("/api/follow-up/note")
+def follow_up_note(patient: str | None = None) -> dict:
+    if patient is None:
+        return {"note": "", "patient_name": "", "sample_id": None}
+    return office_service.follow_up_note(patient)
+
+
 # --- FHIR Patient Context Board foundation (shared substrate) ---
 
 class ScanRequest(BaseModel):
@@ -199,8 +206,8 @@ class SummarizeRequest(BaseModel):
 
 
 @app.get("/api/office/requests")
-def office_requests() -> list[dict]:
-    return office_service.get_queue()
+def office_requests(patient: str | None = None) -> list[dict]:
+    return office_service.get_queue(patient)
 
 
 @app.post("/api/office/prefill")

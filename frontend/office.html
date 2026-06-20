@@ -271,13 +271,40 @@ async function setProvider(p){
   probeProvider(p);
 }
 
+const PATIENT_ID=new URLSearchParams(location.search).get("patient");
+let PATIENT_NAME="";
+
 (async function init(){
   try{ const h=await (await fetch("/api/health")).json(); const p=h.force_mock?"mock":h.provider; applyProvider(p); probeProvider(p); }catch(e){}
-  try{ QUEUE=await (await fetch("/api/office/requests")).json(); }catch(e){ QUEUE=[]; }
+  const url=PATIENT_ID?`/api/office/requests?patient=${encodeURIComponent(PATIENT_ID)}`:"/api/office/requests";
+  try{ QUEUE=await (await fetch(url)).json(); }catch(e){ QUEUE=[]; }
   AUTO=QUEUE.filter(r=>r.route!=="physician_review");
   PHYS=QUEUE.filter(r=>r.route==="physician_review");
+  if(PATIENT_ID){
+    try{ const m=await (await fetch(`/api/follow-up/note?patient=${encodeURIComponent(PATIENT_ID)}`)).json(); PATIENT_NAME=m.patient_name||PATIENT_ID; }catch(e){ PATIENT_NAME=PATIENT_ID; }
+    renderPatientContext();
+  }
+  if(PATIENT_ID && QUEUE.length===0){ renderNoRequests(); return; }
   go(1);
 })();
+
+function renderPatientContext(){
+  const name=PATIENT_NAME||PATIENT_ID;
+  let bar=$("patientCtx");
+  if(!bar){
+    bar=document.createElement("div");
+    bar.id="patientCtx"; bar.className="demo-ctx";
+    const main=document.querySelector("main")||document.body;
+    main.insertBefore(bar, main.firstChild);
+  }
+  bar.style.display="flex"; bar.style.alignItems="center"; bar.style.gap="10px";
+  bar.innerHTML=`<span><span class="demo-ctx-label">Office Assistant —</span> ${esc(name)}'s requests</span><a href="/board" style="margin-left:auto;font-weight:600;color:var(--teal-2);text-decoration:none">← Back to board</a>`;
+}
+function renderNoRequests(){
+  const name=PATIENT_NAME||PATIENT_ID;
+  $("rail").innerHTML=""; $("caption").textContent="";
+  $("stage").innerHTML=`<div class="stagepanel"><div class="empty">No open requests for ${esc(name)}.</div></div>`;
+}
 
 function renderRail(){
   const sub=(STEP===3||STEP===4)&&PHYS.length>1?` · form ${CURSOR+1} of ${PHYS.length}`:"";

@@ -74,5 +74,29 @@
     "status": "finished",
     "subject": {"reference": "Patient/synthetic-B"},
     "period": {"start": "2026-05-02"}
+  },
+  {
+    "resourceType": "Patient",
+    "id": "synthetic-C",
+    "meta": {"versionId": "1", "lastUpdated": "2026-05-03T09:00:00Z"},
+    "name": [{"use": "official", "family": "Synthetic", "given": ["Riley"]}],
+    "gender": "female",
+    "birthDate": "1965-04-09"
+  },
+  {
+    "resourceType": "Condition",
+    "id": "cond-C1",
+    "meta": {"versionId": "1", "lastUpdated": "2026-05-03T09:00:00Z"},
+    "clinicalStatus": {"coding": [{"code": "active"}]},
+    "code": {"text": "Osteoarthritis of knee"},
+    "subject": {"reference": "Patient/synthetic-C"}
+  },
+  {
+    "resourceType": "Encounter",
+    "id": "enc-C1",
+    "meta": {"versionId": "1", "lastUpdated": "2026-05-03T09:00:00Z"},
+    "status": "finished",
+    "subject": {"reference": "Patient/synthetic-C"},
+    "period": {"start": "2026-05-03"}
   }
 ]

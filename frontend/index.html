@@ -6,9 +6,11 @@
 <title>Loop — follow-up co-pilot</title>
 <style>
   :root{
-    --paper:#F5F6F8; --card:#FFFFFF;
+    --paper:#EDF0F4; --card:#FFFFFF;
     --ink:#1B2430; --ink-strong:#11161F; --muted:#5C6675; --faint:#8A93A1;
-    --hair:#E5E8EE;
+    --hair:#D9DEE7;
+    --shadow-sm:0 1px 2px rgba(17,22,31,.05), 0 1px 3px rgba(17,22,31,.07);
+    --shadow-md:0 2px 4px rgba(17,22,31,.05), 0 8px 20px rgba(17,22,31,.07);
     --ok:#0E8A6B; --ok-bg:#E7F4EF;
     --warn:#9A6B14; --warn-bg:#FBF1DC; --warn-line:#D9B45A;
     --gone:#9AA2AE; --gone-bg:#F2F3F5;
@@ -58,7 +60,7 @@
   main{max-width:1180px; margin:0 auto; padding:22px;
        display:grid; grid-template-columns:0.92fr 1.08fr; gap:22px; align-items:start}
   @media (max-width:920px){ main{grid-template-columns:1fr} }
-  .panel{background:var(--card); border:1px solid var(--hair); border-radius:14px; padding:18px}
+  .panel{background:var(--card); border:1px solid var(--hair); border-radius:14px; padding:18px; box-shadow:var(--shadow-md)}
   .panel-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px}
   .panel-head h2{margin:0; font-size:15px; font-weight:640; letter-spacing:-.01em}
 
@@ -72,6 +74,7 @@
     width:100%; min-height:330px; margin-top:12px; resize:vertical;
     font-family:var(--mono); font-size:12.5px; line-height:1.55; color:var(--ink);
     border:1px solid var(--hair); border-radius:10px; padding:13px; background:#FCFCFD;
+    box-shadow:inset 0 1px 2px rgba(17,22,31,.06);
   }
   .row{display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap}
   .synthetic-note{font-size:12px; color:var(--faint); display:flex; align-items:center; gap:6px}
@@ -122,7 +125,8 @@
   .card{
     border:1px solid var(--hair); border-left:3px solid var(--warn-line);
     border-radius:11px; padding:13px 14px; margin-bottom:10px; background:var(--card);
-    transition:border-color .12s ease, background .12s ease;
+    box-shadow:var(--shadow-sm);
+    transition:border-color .12s ease, background .12s ease, box-shadow .12s ease;
   }
   .card.proposed.conf-high,.card.proposed.conf-medium{border-left-color:var(--hair)}
   .card.approved,.card.edited{border-left-color:var(--ok)}
@@ -355,7 +359,37 @@ async function setProvider(p){
   $("exportBtn").addEventListener("click", runExport);
   wireResultsDelegation();
   setupDictation();
+
+  await maybeLoadPatient();
 })();
+
+async function maybeLoadPatient(){
+  const pid = new URLSearchParams(location.search).get("patient");
+  if(!pid) return;
+  let m;
+  try{ m = await (await fetch(`/api/follow-up/note?patient=${encodeURIComponent(pid)}`)).json(); }
+  catch(e){ return; }
+  if(m && m.sample_id){
+    const sel = $("sampleSelect");
+    for(let i=0;i<sel.options.length;i++){ if(sel.options[i].value===m.sample_id){ sel.selectedIndex=i; break; } }
+  }
+  if(m && typeof m.note === "string" && m.note) $("note").value = m.note;
+  renderPatientContext(m && m.patient_name);
+}
+
+function renderPatientContext(name){
+  let bar = $("patientCtx");
+  if(!bar){
+    bar = document.createElement("div");
+    bar.id = "patientCtx";
+    bar.className = "demo-next";
+    bar.style.margin = "0";
+    const main = document.querySelector("main") || document.body;
+    main.parentNode.insertBefore(bar, main);
+  }
+  bar.style.display = "flex"; bar.style.alignItems = "center"; bar.style.gap = "12px";
+  bar.innerHTML = `<span class="demo-next-text">Follow-up — ${esc(name||"patient")}</span><a href="/board" style="margin-left:auto;font-weight:600;color:var(--ok);text-decoration:none">← Back to board</a>`;
+}
 
 // ---------- voice dictation (local STT via /api/transcribe) ----------
 let mediaRecorder = null, audioChunks = [], recording = false;

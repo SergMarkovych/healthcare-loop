@@ -83,5 +83,29 @@
     "intent": "order",
     "description": "Patient to bring home blood pressure log to next visit",
     "for": {"reference": "Patient/synthetic-B"}
+  },
+  {
+    "resourceType": "Patient",
+    "id": "synthetic-C",
+    "meta": {"versionId": "2", "lastUpdated": "2026-06-15T08:10:00Z"},
+    "name": [{"use": "official", "family": "Synthetic", "given": ["Riley"]}],
+    "gender": "female",
+    "birthDate": "1965-04-09"
+  },
+  {
+    "resourceType": "Condition",
+    "id": "cond-C1",
+    "meta": {"versionId": "2", "lastUpdated": "2026-06-15T08:10:00Z"},
+    "clinicalStatus": {"coding": [{"code": "active"}]},
+    "code": {"text": "Osteoarthritis of knee"},
+    "subject": {"reference": "Patient/synthetic-C"}
+  },
+  {
+    "resourceType": "Encounter",
+    "id": "enc-C1",
+    "meta": {"versionId": "2", "lastUpdated": "2026-06-15T08:10:00Z"},
+    "status": "finished",
+    "subject": {"reference": "Patient/synthetic-C"},
+    "period": {"start": "2026-05-03"}
   }
 ]

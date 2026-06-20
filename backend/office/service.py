@@ -35,9 +35,11 @@ def _write_enabled() -> bool:
     return os.environ.get("WRITE_ENABLED", "").strip().lower() in _TRUTHY
 
 
-def get_queue() -> list[dict]:
+def get_queue(patient_id: str | None = None) -> list[dict]:
     queue = []
     for req in REQUESTS:
+        if patient_id is not None and req["patient_id"] != patient_id:
+            continue
         cls = necessity.classify(req["category"])
         m = metrics.per_task(req["category"], cls["route"])
         item = {**req, **cls, "metrics": m,
@@ -46,6 +48,18 @@ def get_queue() -> list[dict]:
             item["form_title"] = forms.FORMS[req["category"]]["title"]
         queue.append(item)
     return queue
+
+
+def follow_up_note(patient_id: str) -> dict:
+    name = DEMOGRAPHICS.get(patient_id, {}).get("name", "")
+    req = next((r for r in REQUESTS
+                if r["patient_id"] == patient_id and r.get("sample_id")), None)
+    if req is None:
+        return {"patient_id": patient_id, "patient_name": name,
+                "sample_id": None, "note": ""}
+    sid = req["sample_id"]
+    return {"patient_id": patient_id, "patient_name": name,
+            "sample_id": sid, "note": _SAMPLE_NOTE.get(sid, "")}
 
 
 def prefill_request(request_id: str, draft: bool = True) -> dict:

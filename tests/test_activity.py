@@ -4,8 +4,9 @@ Patient Activity List (V4 §17.1) via GET /api/fhir/activity.
 After two fixture scans the per-patient diff (test_diff.py) is:
   synthetic-A: new=1 (obs-A2), updated=1 (med-A1 dose), not_returned=0  -> volume 2
   synthetic-B: new=1 (task-B1), updated=0,             not_returned=1 (obs-B1) -> volume 2
+  synthetic-C: new=0, updated=0, not_returned=0                          -> volume 0
 synthetic-B also has one open workflow item (Task/task-B1, status 'requested').
-Both patients land at volume 2 -> 'Medium' data attention.
+A and B land at volume 2 -> 'Medium'; synthetic-C is unchanged -> 'Low'.
 """
 
 
@@ -35,7 +36,7 @@ def test_activity_lists_both_patients_with_counts(client):
 
     rows = _two_scans_then_activity(client, fhir_service)
     rows_by_id = _by_id(rows)
-    assert set(rows_by_id) == {"synthetic-A", "synthetic-B"}
+    assert set(rows_by_id) == {"synthetic-A", "synthetic-B", "synthetic-C"}
 
     a = rows_by_id["synthetic-A"]
     assert (a["new"], a["updated"], a["not_returned"]) == (1, 1, 0)
@@ -46,6 +47,11 @@ def test_activity_lists_both_patients_with_counts(client):
     assert (b["new"], b["updated"], b["not_returned"]) == (1, 0, 1)
     assert b["open_workflow"] == 1  # Task/task-B1, status 'requested'
     assert b["name"] == "Alex Demo"
+
+    c = rows_by_id["synthetic-C"]
+    assert (c["new"], c["updated"], c["not_returned"]) == (0, 0, 0)
+    assert c["open_workflow"] == 0
+    assert c["name"] == "Riley Synthetic"
 
     fhir_service.reset_store()
 
@@ -68,11 +74,14 @@ def test_activity_attention_level_present(client):
     from backend.fhir import service as fhir_service
 
     rows = _two_scans_then_activity(client, fhir_service)
+    by_id = _by_id(rows)
     for r in rows:
         assert r["data_attention"] in {"Low", "Medium", "High"}
-        # both fixture patients sit at change-volume 2 -> Medium
-        assert r["data_attention"] == "Medium"
         assert r["last_scan"]  # latest scan_run timestamp present
+    # A and B sit at change-volume 2 -> Medium; unchanged synthetic-C -> Low
+    assert by_id["synthetic-A"]["data_attention"] == "Medium"
+    assert by_id["synthetic-B"]["data_attention"] == "Medium"
+    assert by_id["synthetic-C"]["data_attention"] == "Low"
 
     fhir_service.reset_store()
 
