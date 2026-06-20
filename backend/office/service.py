@@ -120,7 +120,12 @@ def verify_request(request_id: str) -> dict:
     Exposed at POST /api/office/verify. Deriving from the server's prefill (not from
     caller-supplied fields) is the security property — a caller cannot forge a pass.
     """
-    return prefill_request(request_id).get("verification", {})
+    base = prefill_request(request_id)
+    # Surface not_found / no_form like approve_request does, rather than collapsing
+    # every no-verdict case to {} (which a caller could misread as a clean pass).
+    if "verification" not in base:
+        return base
+    return base["verification"]
 
 
 def approve_request(request_id: str, completed_fields: dict | None = None) -> dict:

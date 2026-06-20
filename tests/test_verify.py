@@ -124,3 +124,15 @@ def test_verify_endpoint_is_server_derived(client):
     assert isinstance(payload["missing_required"], list)
     # identical to the gate computed during prefill -> proves the same server-derived path
     assert payload == service.prefill_request(rid)["verification"]
+
+
+def test_verify_endpoint_unknown_request_surfaces_status_not_blank(client):
+    # A bad request_id must NOT collapse to {} (a caller could misread that as a
+    # clean pass) -- it surfaces the not_found status like /api/office/approve does.
+    resp = client.post("/api/office/verify", json={"request_id": "does-not-exist"})
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload != {}
+    assert payload.get("status") == "not_found"
+    # crucially, not a pass-looking verdict
+    assert "ungrounded" not in payload
