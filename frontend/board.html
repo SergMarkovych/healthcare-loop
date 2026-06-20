@@ -8,12 +8,12 @@
   :root{
     /* cool-tinted neutrals — premium never uses flat grey */
     --bg:#F6F8FB; --surface:#FFFFFF; --surface-2:#F2F5F9;
-    --ink:#0E1726; --ink-2:#0A0F1A; --muted:#566173; --faint:#9AA4B2;
+    --ink:#0E1726; --ink-2:#0A0F1A; --muted:#566173; --faint:#697283;
     --hair:#E4E9F0; --hair-2:#EDF1F6;
     /* single trust accent */
-    --teal:#0E8A6B; --teal-2:#0B6E55; --teal-bg:#E4F4EE;
+    --teal:#0C7E61; --teal-2:#0B6E55; --teal-bg:#E4F4EE;
     /* data-attention only — always paired with a label + icon */
-    --amber:#B45309; --amber-bg:#FBEFDD;
+    --amber:#A84A07; --amber-bg:#FBEFDD;
     --rose:#B42318; --rose-bg:#FBE9E7;
     --slate:#3E5C8A; --slate-bg:#E9EEF7;
     --focus:#2563EB;
@@ -44,14 +44,15 @@
   .chip svg{color:var(--teal)}
 
   main{max-width:1200px; margin:0 auto; padding:24px 24px 72px}
-
-  .grid{display:grid; grid-template-columns:300px 1fr; gap:20px; align-items:start}
-  @media(max-width:880px){.grid{grid-template-columns:1fr}}
   .panel{background:var(--surface); border:1px solid var(--hair); border-radius:var(--r-lg);
     padding:18px; box-shadow:var(--shadow)}
-  .panel-h{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:3px}
+  .panel-h{display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:3px; flex-wrap:wrap}
+  .panel-h .l{display:flex; align-items:baseline; gap:12px; min-width:0; flex-wrap:wrap}
   .panel h2{margin:0; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--faint)}
   .panel .hint{font-size:12.5px; color:var(--muted); margin:0 0 14px}
+  .toolbar{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+  .scanmeta{font-size:12px; color:var(--muted)}
+  .scanmeta b{font-weight:600; color:var(--ink)}
 
   button{font-family:inherit; cursor:pointer}
   .btn{appearance:none; border:1px solid var(--teal-2); background:linear-gradient(180deg,var(--teal),var(--teal-2));
@@ -62,37 +63,90 @@
   .btn.ghost:hover{background:var(--surface-2); border-color:#D4DBE5}
   .btn[disabled]{opacity:.5; cursor:default; filter:none}
 
-  .plist{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
-  .plist li{border:1px solid var(--hair); border-radius:var(--r-md); padding:11px 13px; cursor:pointer;
-    background:var(--surface); transition:border-color .12s, background .12s, box-shadow .12s; position:relative}
-  .plist li:hover{border-color:#CBD5E3; box-shadow:var(--shadow)}
-  .plist li.sel{border-color:var(--teal); background:var(--teal-bg)}
-  .plist li.sel::before{content:""; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:3px; background:var(--teal)}
-  .plist .pn{font-weight:600; font-size:14px; letter-spacing:-.01em}
-  .plist .pid{font-size:11px; color:var(--faint); font-family:var(--mono); margin-top:1px}
-
   .empty{border:1px dashed var(--hair); border-radius:var(--r-md); padding:34px 22px; text-align:center; color:var(--muted); font-size:13px}
   .empty .big{display:block; font-size:14.5px; font-weight:650; color:var(--ink); margin-bottom:5px; letter-spacing:-.01em}
+  .empty .btn{margin-top:14px}
 
-  /* context cards */
+  /* --- View 1: activity table --- */
+  .table-wrap{overflow-x:auto; margin:0 -4px}
+  table.activity{width:100%; border-collapse:collapse; font-size:13.5px}
+  table.activity thead th{font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--faint); text-align:left; padding:0 12px 10px; border-bottom:1px solid var(--hair); white-space:nowrap}
+  table.activity thead th.num{text-align:right; padding-right:26px}
+  table.activity thead th.att{text-align:left}
+  table.activity tbody tr{border-bottom:1px solid var(--hair-2)}
+  table.activity tbody tr:last-child{border-bottom:0}
+  table.activity td{vertical-align:middle}
+  /* whole row is one button spanning the cells via a grid overlay link pattern */
+  .rowbtn{display:contents}
+  td.cell{padding:11px 12px}
+  td.num{text-align:right; font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; color:var(--ink); white-space:nowrap}
+  td.num.zero{color:var(--faint)}
+  tr.prow{cursor:pointer; transition:background .12s}
+  tr.prow:hover{background:var(--surface-2)}
+  tr.prow:focus-visible{outline:2px solid var(--focus); outline-offset:-2px; border-radius:var(--r-sm)}
+  tr.prow .pn{font-weight:600; letter-spacing:-.01em; color:var(--ink)}
+  tr.prow .pid{font-size:11px; color:var(--faint); font-family:var(--mono); margin-top:1px}
+  td.scan{color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
+
+  /* data-attention badge — label + dot + color, never color alone */
+  .att-badge{display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600;
+    padding:4px 10px; border-radius:999px; border:1px solid transparent; white-space:nowrap; letter-spacing:-.005em}
+  .att-badge .dot{width:7px; height:7px; border-radius:50%; flex:0 0 auto}
+  .att-low{background:var(--teal-bg); color:var(--teal-2); border-color:#BFE6D8}
+  .att-low .dot{background:var(--teal)}
+  .att-medium{background:var(--amber-bg); color:var(--amber); border-color:#F0D9B5}
+  .att-medium .dot{background:var(--amber)}
+  .att-high{background:var(--rose-bg); color:var(--rose); border-color:#F1C6C1}
+  .att-high .dot{background:var(--rose)}
+
+  /* skeleton rows */
+  .sk{display:inline-block; height:11px; border-radius:6px; background:linear-gradient(90deg,var(--hair-2),var(--surface-2),var(--hair-2));
+    background-size:200% 100%; animation:shimmer 1.2s linear infinite}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .sk.w-name{width:140px} .sk.w-id{width:90px; height:9px; margin-top:5px} .sk.w-num{width:24px}
+  .sk.w-scan{width:88px} .sk.w-badge{width:84px; height:22px; border-radius:999px}
+
+  /* --- View 2: context board --- */
+  .board-head{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:18px}
+  .board-head h2.pname{margin:0; font-size:20px; font-weight:680; letter-spacing:-.02em; color:var(--ink-2); outline:none}
+  .board-head .pid{font-size:12px; color:var(--faint); font-family:var(--mono)}
+  .board-head .spacer{margin-left:auto}
+
   .ccard{background:var(--surface); border:1px solid var(--hair); border-radius:var(--r-lg);
     padding:16px 18px; margin-bottom:14px; box-shadow:var(--shadow)}
   .ccard h3{margin:0 0 12px; font-size:14px; font-weight:660; letter-spacing:-.01em; display:flex; align-items:center; gap:9px}
   .ccard h3::before{content:""; width:9px; height:9px; border-radius:3px; background:var(--faint); flex:0 0 auto}
   .ccard.c-patient_snapshot h3::before{background:var(--teal)}
-  .ccard.c-attention h3::before{background:var(--amber)}
-  .ccard.c-review_queue h3::before{background:var(--slate)}
-  .item{display:flex; gap:12px; align-items:center; padding:9px 0; border-top:1px solid var(--hair-2)}
+  .ccard.c-new_updated h3::before{background:var(--amber)}
+  .ccard.c-open_workflow h3::before{background:var(--slate)}
+  .ccard.c-source_references h3::before{background:var(--slate)}
+  /* limitations: faint, honest, the API's blind spot */
+  .ccard.c-limitations{border-color:var(--faint)}
+  .ccard.c-limitations h3::before{background:var(--faint)}
+
+  .item{display:flex; gap:12px; align-items:flex-start; padding:9px 0; border-top:1px solid var(--hair-2)}
   .item:first-of-type{border-top:0}
   .item .txt{flex:1; font-size:13.5px; color:var(--ink); min-width:0}
   .src{font-family:var(--mono); font-size:10.5px; color:var(--muted); background:var(--surface-2);
-    border:1px solid var(--hair); border-radius:6px; padding:3px 8px; white-space:nowrap; letter-spacing:-.01em}
+    border:1px solid var(--hair); border-radius:6px; padding:3px 8px; white-space:nowrap; letter-spacing:-.01em; flex:0 0 auto}
+  .item-evi{font-size:11px; color:var(--faint); margin-top:3px}
+
+  /* new/updated diff rows */
+  .diff{display:flex; flex-wrap:wrap; align-items:center; gap:7px; font-size:12.5px; margin-top:6px;
+    padding:6px 9px; border:1px solid var(--hair-2); border-radius:var(--r-sm); background:var(--surface-2)}
+  .diff .path{font-family:var(--mono); font-size:10.5px; color:var(--slate); margin-right:2px}
+  .diff .old{color:var(--muted); text-decoration:line-through; text-decoration-color:var(--faint)}
+  .diff .arrow{color:var(--faint); flex:0 0 auto}
+  .diff .new{color:var(--ink); font-weight:600}
+  .squery{font-family:var(--mono); font-size:10.5px; color:var(--faint); margin-top:5px; word-break:break-all}
+
   .restate{font-size:11.5px; color:var(--faint); margin-top:14px; padding-top:13px; border-top:1px solid var(--hair-2);
     display:flex; align-items:center; gap:7px; line-height:1.4}
   .restate svg{color:var(--teal); flex:0 0 auto}
 
   :focus-visible{outline:2px solid var(--focus); outline-offset:2px; border-radius:3px}
-  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
 </style>
 </head>
 <body>
@@ -112,73 +166,243 @@
 </header>
 
 <main>
-  <div class="grid">
-    <section class="panel">
-      <div class="panel-h"><h2>Patients</h2></div>
-      <p class="hint">From the latest FHIR scan. Pick one to assemble its board.</p>
-      <div id="patients"><div class="empty"><span class="big">No scan yet</span>Load the synthetic scans to begin.</div></div>
-      <div style="margin-top:14px"><button class="btn ghost" id="loadBtn">Load synthetic scans</button></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-h"><h2>Context</h2></div>
-      <p class="hint">Cards assembled only from FHIR-API data. Every line cites its source; nothing clinical is invented.</p>
-      <div id="board">
-        <div class="empty"><span class="big">Select a patient</span>Their snapshot, what needs a glance, and the review queue appear here.</div>
+  <!-- VIEW 1 — Patient Activity List -->
+  <section class="panel" id="view-list">
+    <div class="panel-h">
+      <div class="l">
+        <h2>Patient activity</h2>
+        <span class="scanmeta" id="scanMeta"></span>
       </div>
-    </section>
-  </div>
+      <div class="toolbar">
+        <button class="btn ghost" id="scanBtn">Load synthetic scans</button>
+      </div>
+    </div>
+    <p class="hint">From the latest FHIR scan. Open a patient to assemble its source-backed board.</p>
+    <div id="activity"></div>
+  </section>
+
+  <!-- VIEW 2 — Context Board for one patient -->
+  <section id="view-board" hidden>
+    <div class="board-head">
+      <button class="btn ghost" id="backBtn" aria-label="Back to all patients">← All patients</button>
+      <h2 class="pname" id="boardName" tabindex="-1">Patient</h2>
+      <span class="pid" id="boardId"></span>
+      <span class="spacer"></span>
+      <span id="boardAtt"></span>
+    </div>
+    <div id="board"></div>
+  </section>
 </main>
 
 <script>
 "use strict";
 const $ = (id)=>document.getElementById(id);
 const esc = (s)=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-let SELECTED = null;
 
+let ACTIVITY = [];          // last loaded activity rows
+let LAST_FOCUS_ID = null;   // patient id of the row to restore focus to on Back
+
+// ---- attention badge ----
+const ATT_CLASS = {Low:"att-low", Medium:"att-medium", High:"att-high"};
+const ATT_LABEL = "Volume of FHIR changes since last scan — not clinical risk.";
+function attBadge(level){
+  const lvl = level || "Low";
+  const cls = ATT_CLASS[lvl] || "att-low";
+  return `<span class="att-badge ${cls}" role="img" aria-label="${esc(lvl)} · data attention. ${esc(ATT_LABEL)}" title="${esc(ATT_LABEL)}"><span class="dot" aria-hidden="true"></span>${esc(lvl)} · data attention</span>`;
+}
+
+function dateOnly(ts){
+  if(!ts) return "—";
+  const s = String(ts);
+  const m = s.match(/^\d{4}-\d{2}-\d{2}/);
+  return m ? m[0] : s;
+}
+
+// ---- init ----
 (async function init(){
   try{ const h = await (await fetch("/api/health")).json();
        $("modeChip").textContent = h.force_mock ? "Mock mode" : "Model: " + h.model; }catch(e){}
-  loadPatients();
+  loadActivity();
 })();
 
-$("loadBtn").addEventListener("click", async ()=>{
-  $("loadBtn").disabled = true; $("loadBtn").textContent = "Loading…";
+$("scanBtn").addEventListener("click", async ()=>{
+  const b = $("scanBtn"); b.disabled = true; b.textContent = "Scanning…";
+  renderSkeleton();
   try{
     await fetch("/api/fhir/reset",{method:"POST"});
     await fetch("/api/fhir/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:"fixtures",which:1})});
     await fetch("/api/fhir/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:"fixtures",which:2})});
   }catch(e){}
-  $("loadBtn").disabled = false; $("loadBtn").textContent = "Reload synthetic scans";
-  loadPatients();
+  b.disabled = false; b.textContent = "Re-scan";
+  loadActivity();
 });
 
-async function loadPatients(){
-  let pts = [];
-  try{ pts = await (await fetch("/api/fhir/patients")).json(); }catch(e){}
-  if(!pts.length){ $("patients").innerHTML = `<div class="empty"><span class="big">No scan yet</span>Load the synthetic scans to begin.</div>`; return; }
-  $("patients").innerHTML = `<ul class="plist">${pts.map(p=>
-    `<li data-id="${esc(p.id)}"><div class="pn">${esc(p.name)}</div><div class="pid">${esc(p.id)}</div></li>`).join("")}</ul>`;
-  $("patients").querySelectorAll("li").forEach(li=>li.addEventListener("click", ()=>openPatient(li.dataset.id)));
+$("backBtn").addEventListener("click", showList);
+
+// ---- View 1 ----
+function renderSkeleton(){
+  const rows = Array.from({length:4}).map(()=>`
+    <tr class="prow" aria-hidden="true">
+      <td class="cell"><span class="sk w-name"></span><br><span class="sk w-id"></span></td>
+      <td class="cell num"><span class="sk w-num"></span></td>
+      <td class="cell num"><span class="sk w-num"></span></td>
+      <td class="cell num"><span class="sk w-num"></span></td>
+      <td class="cell num"><span class="sk w-num"></span></td>
+      <td class="cell"><span class="sk w-scan"></span></td>
+      <td class="cell"><span class="sk w-badge"></span></td>
+    </tr>`).join("");
+  $("activity").innerHTML = tableShell(rows);
 }
 
-async function openPatient(id){
-  SELECTED = id;
-  $("patients").querySelectorAll("li").forEach(li=>li.classList.toggle("sel", li.dataset.id===id));
+function tableShell(bodyHtml){
+  return `<div class="table-wrap"><table class="activity">
+    <thead><tr>
+      <th scope="col">Patient</th>
+      <th scope="col" class="num">New</th>
+      <th scope="col" class="num">Updated</th>
+      <th scope="col" class="num">Not returned</th>
+      <th scope="col" class="num">Open workflow</th>
+      <th scope="col">Last scan</th>
+      <th scope="col" class="att">Data attention</th>
+    </tr></thead>
+    <tbody>${bodyHtml}</tbody></table></div>`;
+}
+
+async function loadActivity(){
+  renderSkeleton();
+  let rows = [];
+  try{ rows = await (await fetch("/api/fhir/activity")).json(); }
+  catch(e){
+    $("activity").innerHTML = `<div class="empty"><span class="big">Couldn't reach the backend</span>Make sure the Loop server is running, then try again.</div>`;
+    return;
+  }
+  ACTIVITY = Array.isArray(rows) ? rows : [];
+
+  if(!ACTIVITY.length){
+    $("scanMeta").textContent = "";
+    $("activity").innerHTML = `<div class="empty"><span class="big">No scan yet</span>Load the synthetic scans to begin.
+      <div><button class="btn" id="emptyScan">Load synthetic scans</button></div></div>`;
+    const e = $("emptyScan"); if(e) e.addEventListener("click", ()=>$("scanBtn").click());
+    return;
+  }
+
+  // single-scan detection: patients exist but no diff yet (every count is 0).
+  const totalChanges = ACTIVITY.reduce((a,r)=>a+(r.new||0)+(r.updated||0)+(r.not_returned||0),0);
+  const singleScan = totalChanges === 0;
+
+  const last = ACTIVITY[0] && ACTIVITY[0].last_scan;
+  $("scanMeta").innerHTML = last ? `Last scan: <b>${esc(dateOnly(last))}</b>` : "";
+
+  const body = ACTIVITY.map(r=>{
+    const num = (n,noun)=>{
+      const v = singleScan ? "—" : (n||0);
+      const zero = (singleScan || !n) ? " zero" : "";
+      const al = singleScan ? `no changes yet — ${esc(noun)}` : `${n||0} ${esc(noun)}`;
+      return `<td class="cell num${zero}" aria-label="${al}">${esc(v)}</td>`;
+    };
+    return `<tr class="prow" tabindex="0" role="button"
+        aria-label="Open context board for ${esc(r.name)}" data-id="${esc(r.id)}">
+      <td class="cell"><div class="pn">${esc(r.name)}</div><div class="pid">${esc(r.id)}</div></td>
+      ${num(r.new,"new")}
+      ${num(r.updated,"updated")}
+      ${num(r.not_returned,"not returned")}
+      ${num(r.open_workflow,"open workflow")}
+      <td class="cell scan">${esc(dateOnly(r.last_scan))}</td>
+      <td class="cell">${attBadge(r.data_attention)}</td>
+    </tr>`;
+  }).join("");
+
+  const note = singleScan
+    ? `<p class="hint" style="margin:14px 0 0">Only one scan so far — run a second scan to see changes.</p>`
+    : "";
+  $("activity").innerHTML = tableShell(body) + note;
+
+  $("activity").querySelectorAll("tr.prow").forEach(tr=>{
+    const id = tr.dataset.id;
+    tr.addEventListener("click", ()=>openBoard(id, tr));
+    tr.addEventListener("keydown", (ev)=>{
+      if(ev.key==="Enter" || ev.key===" "){ ev.preventDefault(); openBoard(id, tr); }
+    });
+  });
+}
+
+function showList(){
+  $("view-board").hidden = true;
+  $("view-list").hidden = false;
+  // restore focus to the originating row
+  if(LAST_FOCUS_ID){
+    const tr = $("activity").querySelector(`tr.prow[data-id="${CSS.escape(LAST_FOCUS_ID)}"]`);
+    if(tr) tr.focus();
+  }
+}
+
+// ---- View 2 ----
+async function openBoard(id, originRow){
+  LAST_FOCUS_ID = id;
+  const row = ACTIVITY.find(r=>String(r.id)===String(id));
+  $("view-list").hidden = true;
+  $("view-board").hidden = false;
+  $("boardName").textContent = (row && row.name) || "Patient";
+  $("boardId").textContent = id || "";
+  $("boardAtt").innerHTML = row ? attBadge(row.data_attention) : "";
   $("board").innerHTML = `<div class="empty">Assembling board…</div>`;
+  $("boardName").focus();
+
   let data;
   try{ data = await (await fetch("/api/board/"+encodeURIComponent(id))).json(); }
   catch(e){ $("board").innerHTML = `<div class="empty">Couldn't reach the backend.</div>`; return; }
-  if(data.status!=="ok"){ $("board").innerHTML = `<div class="empty">No board for this patient yet — run a scan.</div>`; return; }
+
+  if(data.status==="no_scans"){
+    $("board").innerHTML = `<div class="empty"><span class="big">No board yet</span>Run a scan to assemble this patient's board.</div>`;
+    return;
+  }
+  if(data.status!=="ok"){ $("board").innerHTML = `<div class="empty">No board for this patient yet.</div>`; return; }
+  if(data.patient && data.patient.name) $("boardName").textContent = data.patient.name;
   renderBoard(data);
 }
 
+function diffRow(c){
+  const path = c.path ? `<span class="path">${esc(c.path)}</span>` : "";
+  if(c.change === "changed" || (c.previous!=null && c.current!=null)){
+    return `<div class="diff">${path}<span class="old">${esc(fmtVal(c.previous))}</span>
+      <span class="arrow" aria-hidden="true">→</span><span class="new">${esc(fmtVal(c.current))}</span></div>`;
+  }
+  // added / removed / single-sided
+  const val = c.current!=null ? c.current : c.previous;
+  return `<div class="diff">${path}<span class="new">${esc(fmtVal(val))}</span></div>`;
+}
+
+function fmtVal(v){
+  if(v===null || v===undefined) return "∅";
+  if(typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+function renderItem(it){
+  const src = it.source_reference ? `<span class="src">${esc(it.source_reference)}</span>` : "";
+  let extra = "";
+
+  if(Array.isArray(it.changes) && it.changes.length){
+    extra += it.changes.map(diffRow).join("");
+  }
+  if(it.source_query){
+    extra += `<div class="squery">${esc(it.source_query)}</div>`;
+  } else if(typeof it.evidence === "string"){
+    extra += `<div class="item-evi">${esc(it.evidence)}</div>`;
+  }
+
+  return `<div class="item"><div class="txt">${esc(it.text)}${extra}</div>${src}</div>`;
+}
+
 function renderBoard(data){
-  const cards = data.cards.map(c=>{
-    const items = c.items.map(it=>`<div class="item"><span class="txt">${esc(it.text)}</span>
-      ${it.source_reference?`<span class="src">${esc(it.source_reference)}</span>`:``}</div>`).join("");
-    return `<div class="ccard c-${esc(c.id)}"><h3>${esc(c.title)}</h3>${items||'<div class="item"><span class="txt" style="color:var(--faint)">Nothing to show.</span></div>'}</div>`;
+  const cards = (data.cards||[]).map(c=>{
+    const items = (c.items||[]).map(renderItem).join("")
+      || '<div class="item"><span class="txt" style="color:var(--faint)">Nothing to show.</span></div>';
+    const hid = "h-"+esc(c.id);
+    return `<section class="ccard c-${esc(c.id)}" aria-labelledby="${hid}">
+      <h3 id="${hid}">${esc(c.title)}</h3>${items}</section>`;
   }).join("");
+
   $("board").innerHTML = cards + `<div class="restate">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
     Every line above restates a FHIR-API fact and cites its source. No diagnosis, prognosis, or interpretation is generated.</div>`;

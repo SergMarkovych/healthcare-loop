@@ -234,6 +234,8 @@ sequenceDiagram
   BS-->>U: cards + source references (nothing clinical invented)
 ```
 
-## Verification status (keep current)
-- Built + tested: 51 pytest green (FHIR foundation, rules, office necessity/prefill/approve/safety/diff, board). Office approve flow + Context Board render browser-verified (Playwright). Live FHIR scan/diff/context verified against HAPI.
-- Planned/unverified: 5-card board, Activity List, `/api/fhir/activity`, sources config — see "planned" rows above (ADO Epic AB#610).
+## Verification status (keep current; updated 2026-06-20)
+- **Built + verified (66 pytest green):** FHIR foundation (scan / snapshot / content-hash diff / persisted `resource_diff` / `/metadata` gate / Bundle pagination), rules engine, safe summary, office necessity/prefill/approve/metrics, **5-card Context Board + rules `flags[]`**, **Patient Activity List `GET /api/fhir/activity`**, **config sources registry `config/sources.json` + `GET /api/sources`** (3 active FHIR + 6 roadmap). Live-verified via curl: 5-card board, activity, sources. Office approve flow + board render browser-verified (Playwright). Live FHIR scan/diff/context verified against HAPI.
+- **In progress:** the 2-view board UI (Activity List screen + 5-card render, AB#622/624); browser verify both views (AB#625).
+- **Accessibility:** palette contrast measured against WCAG 2.2 AA. 3 tokens adjusted to pass (`--faint` #9AA4B2→#697283, `--teal` #0E8A6B→#0C7E61, `--amber` #B45309→#A84A07); being applied to `board.html` + `office.html` + the UI spec.
+- **Deferred (roadmap):** SMART on FHIR, CDS Hooks, Health Canada DPD/CCDD, MIMIC-IV, MTSamples, production .NET/PostgreSQL stack (ADO AB#615).
