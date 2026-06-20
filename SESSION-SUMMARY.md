@@ -29,6 +29,28 @@ No backend changes for the wizard — pure client-side state machine over the ex
 (`backend/office/forms.py`) — it routed `eliminate` yet still built a form (critic-flagged
 contradiction). pytest stays 90 passed / 2 skipped.
 
+## Follow-up fixes (commit `1231581`) — gaps from the self-miss review
+
+After the wizard shipped I ran a self-miss pass and closed every gap it named:
+- **Metrics bug (real, now fixed).** The payoff strip re-summed minutes/touchpoints client-side
+  via a type-fragile `QUEUE.find(q=>q.id===id)` lookup that diverged from the headline (showed
+  "13 min / 1 touchpoint" against "cleared 6 of 6"). Replaced with the backend's authoritative
+  `minutes_saved_now` / `physician_touchpoints_avoided` from `/api/office/metrics` → **49 min /
+  3 touchpoints**, consistent with the headline. Single source of truth.
+- **a11y.** `<label for>`↔input `id` associations; counter `aria-live="polite"`; `role="alert"`
+  on the safety-bounce message; focus moves to the step heading on every wizard transition
+  (keyboard/SR users no longer stranded on a removed element).
+- **Safety-bounce path verified (frontend).** Backend net was already tested
+  (`tests/test_approve.py`); I forced the *frontend* bounce by blanking a clinical field and
+  confirmed the alert renders, focus moves to the field, and the wizard does **not** advance.
+- **WRITE_ENABLED ledger verified.** Drove a write-enabled server through the wizard — the payoff
+  ledger renders 3 "Written to FHIR" rows with `Task/` + `QuestionnaireResponse/` locations.
+- **Container build verified.** `docker compose up --build` → `healthcare-loop:latest` builds,
+  runs **healthy**, serves the fixed wizard, `force_mock=true` offline (prefill falls back to
+  `mock`, no Ollama). One gotcha found + handled: a stray host dev-server on :8000 raced the
+  container's port proxy and misreported `force_mock:false` — killed it; inside the container it
+  was always correct.
+
 ## How I verified (the important part)
 
 The lesson recorded earlier this build: **green tests/curl prove a flow RUNS, not that a human
@@ -54,11 +76,11 @@ Screenshots were transient (in `%TEMP%/hc-verify/`); re-run with the scripts the
 1. **Nothing is required — the MVP is complete and usable.** Pull it on the other PC:
    `git clone … && python -m venv .venv && pip install -r requirements.txt -r requirements-dev.txt && python run.py`.
 2. **Optional polish I did NOT do** (not blockers):
-   - Step-5 metrics read "13 min saved / 1 touchpoint" while the headline says "6 of 6 cleared" —
-     the metrics endpoint counts differently than the triage saves-min sum. Reconcile if the
-     mismatch bothers you (`backend/office/metrics.py`). Cosmetic, pre-existing.
    - The "Model: llama3.1" chip shows even when Ollama isn't running (summaries fall back to
-     deterministic). Could gate the chip on a live model probe.
+     deterministic). Could gate the chip on a live model probe. (The earlier step-5 metrics
+     mismatch is **fixed** — see Follow-up fixes above.)
+   - No full axe-core/WCAG sweep — I verified the specific a11y attributes I changed, not the
+     whole page (step-rail has no `aria-current`; decorative ✓ SVGs lack `aria-hidden`).
 3. **Deferred roadmap (only if asked)** — see HANDOFF.md "Deferred" + AB#615: SMART on FHIR,
    CDS Hooks, Health Canada DPD/CCDD, MIMIC-IV, production .NET/Postgres stack. Intentional
    non-goals for a local MVP.
