@@ -15,8 +15,10 @@ from pydantic import BaseModel
 
 from backend import llm
 from backend.board import service as board_service
+from backend.fhir import action_builder
 from backend.fhir import service as fhir_service
 from backend.fhir import sources as fhir_sources
+from backend.fhir import writer as fhir_writer
 from backend.office import service as office_service
 from backend.synthetic_data import SAMPLES
 
@@ -157,3 +159,45 @@ def office_approve(req: ApproveRequest) -> dict:
 @app.post("/api/office/metrics")
 def office_metrics(req: MetricsRequest) -> dict:
     return office_service.project(req.processed)
+
+
+# --- Actions: close the loop by writing the approved item back to FHIR ---
+# These represent the physician's approval. By default (WRITE_ENABLED unset) they
+# simulate the write and return a synthetic id; with WRITE_ENABLED truthy and a
+# FHIR_BASE_URL pointed at a local HAPI they perform a real POST.
+
+class ActionRequest(BaseModel):
+    kind: str                       # task | service_request | communication_request | questionnaire_response
+    patient_id: str
+    payload: dict = {}
+    base_url: str | None = None
+    if_none_exist: str | None = None
+
+
+class BatchActionRequest(BaseModel):
+    actions: list[ActionRequest] = []
+    base_url: str | None = None
+
+
+@app.post("/api/fhir/action")
+def fhir_action(req: ActionRequest) -> dict:
+    try:
+        resource = action_builder.build(req.kind, req.patient_id, req.payload)
+    except ValueError as e:
+        return {"status": "error", "reason": str(e)}
+    result = fhir_writer.create(resource, base_url=req.base_url, if_none_exist=req.if_none_exist)
+    return {"kind": req.kind, "mode": result.get("mode"),
+            "resource": result.get("resource", resource), "result": result}
+
+
+@app.post("/api/fhir/action/batch")
+def fhir_action_batch(req: BatchActionRequest) -> dict:
+    resources = []
+    for a in req.actions:
+        try:
+            resources.append(action_builder.build(a.kind, a.patient_id, a.payload))
+        except ValueError as e:
+            return {"status": "error", "reason": str(e)}
+    bundle = action_builder.build_transaction_bundle(resources)
+    result = fhir_writer.transaction(bundle, base_url=req.base_url)
+    return {"count": len(resources), "mode": result.get("mode"), "result": result}
