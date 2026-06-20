@@ -1,7 +1,7 @@
 """
 Change detection over fixtures scan_1 vs scan_2.
 
-Expected: 2 new, 1 updated, 1 not_returned, 10 unchanged. The one updated item is
+Expected: 3 new, 1 updated, 1 not_returned, 10 unchanged. The one updated item is
 MedicationRequest med-A1 (dosageInstruction 500 -> 1000). The content-hash logic
 treats obs-A1 — whose meta.versionId/lastUpdated changed but whose clinical
 content is identical — as unchanged. synthetic-C's three resources (Patient,
@@ -29,14 +29,14 @@ def _run_two_scans(fhir_service):
 
 def test_diff_counts(fresh_store):
     diff = _run_two_scans(fresh_store)
-    assert diff["counts"] == {"new": 2, "updated": 1, "unchanged": 10, "not_returned": 1}
+    assert diff["counts"] == {"new": 3, "updated": 1, "unchanged": 10, "not_returned": 1}
 
 
 def test_diff_new_and_not_returned_keys(fresh_store):
     diff = _run_two_scans(fresh_store)
     new_keys = {i["key"] for i in diff["new"]}
     not_returned_keys = {i["key"] for i in diff["not_returned"]}
-    assert new_keys == {"Observation/obs-A2", "Task/task-B1"}
+    assert new_keys == {"Observation/obs-A2", "Observation/obs-B2", "Task/task-B1"}
     assert not_returned_keys == {"Observation/obs-B1"}
 
 

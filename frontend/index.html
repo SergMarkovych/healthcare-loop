@@ -199,9 +199,7 @@
     <span class="tagline">Encounter &rarr; reviewed follow-up, on your machine</span>
   </div>
   <nav class="toolnav" aria-label="Tools">
-    <a href="/" aria-current="page">Follow-up extractor</a>
-    <a href="/office">Office Assistant</a>
-    <a href="/board">Context Board</a>
+    <a href="/board">← Back to board</a>
   </nav>
   <button class="demo-btn" id="demoBtn" onclick="startDemo()">▶ Demo</button>
   <div class="provider-toggle" id="providerToggle" aria-label="LLM provider">
@@ -387,8 +385,7 @@ function renderPatientContext(name){
     const main = document.querySelector("main") || document.body;
     main.parentNode.insertBefore(bar, main);
   }
-  bar.style.display = "flex"; bar.style.alignItems = "center"; bar.style.gap = "12px";
-  bar.innerHTML = `<span class="demo-next-text">Follow-up — ${esc(name||"patient")}</span><a href="/board" style="margin-left:auto;font-weight:600;color:var(--ok);text-decoration:none">← Back to board</a>`;
+  bar.innerHTML = `<span class="demo-next-text">Follow-up — ${esc(name||"patient")}</span>`;
 }
 
 // ---------- voice dictation (local STT via /api/transcribe) ----------

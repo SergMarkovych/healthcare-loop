@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from backend import llm
@@ -40,8 +40,13 @@ class ProviderConfig(BaseModel):
     provider: Literal["mock", "ollama", "openrouter"]
 
 
-@app.get("/", response_class=HTMLResponse)
-def index() -> str:
+@app.get("/")
+def index() -> RedirectResponse:
+    return RedirectResponse(url="/board")
+
+
+@app.get("/follow-up", response_class=HTMLResponse)
+def follow_up_ui() -> str:
     return _FRONTEND.read_text(encoding="utf-8")
 
 

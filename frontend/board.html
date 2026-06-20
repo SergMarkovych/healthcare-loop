@@ -292,7 +292,7 @@ function attBadge(level){
 
 function rowActions(id){
   const q = encodeURIComponent(id || "");
-  return `<a class="rowact" href="/?patient=${q}" onclick="event.stopPropagation()" title="Open the follow-up extractor for this patient">Follow-up</a>`
+  return `<a class="rowact" href="/follow-up?patient=${q}" onclick="event.stopPropagation()" title="Open the follow-up extractor for this patient">Follow-up</a>`
     + `<a class="rowact" href="/office?patient=${q}" onclick="event.stopPropagation()" title="Open the office assistant for this patient">Office Assistant</a>`;
 }
 

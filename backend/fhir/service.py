@@ -308,6 +308,7 @@ def patient_activity() -> list[dict]:
             "data_attention": _data_attention(new + updated + not_returned),
             "has_two_scans": has_two_scans,
         })
+    rows.sort(key=lambda r: r["new"] + r["updated"] + r["not_returned"], reverse=True)
     return rows
 
 

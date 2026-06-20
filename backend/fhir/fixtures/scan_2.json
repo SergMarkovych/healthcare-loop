@@ -44,6 +44,15 @@
     "valueQuantity": {"value": 92, "unit": "umol/L"}
   },
   {
+    "resourceType": "Observation",
+    "id": "obs-B2",
+    "meta": {"versionId": "1", "lastUpdated": "2026-06-15T08:05:00Z"},
+    "status": "final",
+    "code": {"text": "C-reactive protein"},
+    "subject": {"reference": "Patient/synthetic-B"},
+    "valueQuantity": {"value": 48, "unit": "mg/L"}
+  },
+  {
     "resourceType": "Encounter",
     "id": "enc-A1",
     "meta": {"versionId": "2", "lastUpdated": "2026-06-15T08:00:00Z"},

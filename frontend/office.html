@@ -203,9 +203,7 @@
     </span>
   </div>
   <nav class="toolnav" aria-label="Tools">
-    <a href="/">Follow-up extractor</a>
-    <a href="/board">Context Board</a>
-    <a href="/office" aria-current="page">Office Assistant</a>
+    <a href="/board">← Back to board</a>
   </nav>
   <div class="provider-toggle" id="providerToggle" aria-label="LLM provider">
     <button class="ptbtn" data-p="openrouter" onclick="setProvider('openrouter')">AI model</button>
@@ -297,8 +295,7 @@ function renderPatientContext(){
     const main=document.querySelector("main")||document.body;
     main.insertBefore(bar, main.firstChild);
   }
-  bar.style.display="flex"; bar.style.alignItems="center"; bar.style.gap="10px";
-  bar.innerHTML=`<span><span class="demo-ctx-label">Office Assistant —</span> ${esc(name)}'s requests</span><a href="/board" style="margin-left:auto;font-weight:600;color:var(--teal-2);text-decoration:none">← Back to board</a>`;
+  bar.innerHTML=`<span class="demo-ctx-label">Office Assistant —</span> ${esc(name)}'s requests`;
 }
 function renderNoRequests(){
   const name=PATIENT_NAME||PATIENT_ID;
