@@ -48,4 +48,30 @@ change detection is **content-hash based, not metadata based**. The context boar
 `hc-A` restates only the source-backed change (`MedicationRequest/med-A`) with no invented
 clinical content.
 
+## 4. Close the loop — write physician-approved resources back (optional)
+
+The Office Assistant can POST the approved follow-up `Task` + a `QuestionnaireResponse`
+back to the FHIR server. **Off by default (mock-safe);** enable it explicitly:
+
+```bash
+# run the app with writes enabled, pointed at the LOCAL HAPI (never the public server)
+WRITE_ENABLED=1 FHIR_BASE_URL=http://localhost:8080/fhir python run.py
+```
+
+**Important — load the patient first.** HAPI enforces referential integrity, so a `Task`
+whose `for` references `Patient/<id>` is rejected (`400 HAPI-1094`) unless that patient
+exists on the server. Create the request's patient before approving:
+
+```bash
+curl -X PUT http://localhost:8080/fhir/Patient/synthetic-A \
+  -H 'Content-Type: application/fhir+json' \
+  -d '{"resourceType":"Patient","id":"synthetic-A","name":[{"family":"Sample","given":["Jordan"]}]}'
+```
+
+Then open `/office`, prepare the **Disability Tax Credit** request, complete the clinical
+fields, and **Approve**. The result panel shows `↪ Written to FHIR (live): Task/<id> ·
+QuestionnaireResponse/<id>`. Verify on the server: `GET http://localhost:8080/fhir/Task/<id>`.
+If the patient is missing (or `WRITE_ENABLED` is off) the writer **safely falls back to a
+simulated/mock create** and the panel reads `(mock/simulated)` — the demo never fails.
+
 Teardown: `docker rm -f hapi`.
