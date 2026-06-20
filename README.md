@@ -7,8 +7,9 @@
 
 A hackathon scaffold for **Hackers & Healers | AI in Healthcare** (Ottawa).
 It turns a free-text primary-care encounter note into a **structured, reviewable
-follow-up plan** — running entirely on your machine, with a clinician approving or
-editing every item before anything is "saved."
+follow-up plan** — with a clinician approving or editing every item before anything
+is "saved." It can run fully on-device (local Ollama) or against a hosted model
+(OpenRouter) — see the privacy note and LLM provider options below.
 
 This is a starting point, not a finished product. It's wired end-to-end so your
 team spends the day on the idea, not the plumbing.
@@ -33,12 +34,17 @@ This scaffold is deliberately built around that:
 - **Keeps the human in charge** — nothing is auto-committed. Each AI suggestion is
   a *proposal* the clinician approves, edits, or removes. The export contains only
   what a human signed off on, with an audit trail.
-- **Local-first by design** — extraction runs against a local LLM (Ollama). No
-  encounter text leaves the machine. This matters: the judging panel includes
-  **Khaled El Emam** (Tier 1 Canada Research Chair in Medical AI; Director, OMARI),
-  whose field is health-data de-identification. Be precise about privacy, not
-  hand-wavy. Use **synthetic data only** during the event — real PHI is governed by
-  **PHIPA** (Ontario) and is out of scope for a prototype.
+- **Local-first is supported, but not the only mode — be precise about this.**
+  In **Option A** (local Ollama) extraction runs on-device and no encounter text
+  leaves the machine. In **Option B** (OpenRouter, the default in `docker-compose`)
+  the encounter note *is* sent to a hosted model, and **voice dictation always sends
+  audio to OpenRouter** regardless of the text provider. Pick the mode that matches
+  your privacy posture and state it accurately. This matters: the judging panel
+  includes **Khaled El Emam** (Tier 1 Canada Research Chair in Medical AI; Director,
+  OMARI), whose field is health-data de-identification — don't claim "nothing leaves
+  the machine" when running the hosted path. Use **synthetic data only** during the
+  event — real PHI is governed by **PHIPA** (Ontario) and is out of scope for a
+  prototype.
 
 What *not* to build for this room: a generic ambient scribe or a diagnostic
 oracle. The clinicians said they want repetitive work removed, not their judgement
