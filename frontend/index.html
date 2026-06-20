@@ -654,9 +654,6 @@ function runExport(){
   };
 
   const text = JSON.stringify(out, null, 2);
-  const pre = $("exportOut");
-  pre.textContent = text; pre.classList.remove("hidden");
-  pre.scrollIntoView({behavior:"smooth", block:"nearest"});
 
   const blob = new Blob([text], {type:"application/json"});
   const a = document.createElement("a");
