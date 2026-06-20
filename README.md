@@ -68,8 +68,8 @@ python run.py                       # -> http://127.0.0.1:8000
 Three UIs are served:
 
 - **`/office`** — the **Office Assistant** (Direction B MVP): necessity gate → form
-  prefill → metrics. See [`docs/demo-script.md`](docs/demo-script.md).
-- **`/board`** — the **Patient Context Board** (Direction A): Activity List + 5-card board (snapshot, new/updated, open workflow, limitations, source references). See [`docs/board-demo.md`](docs/board-demo.md).
+  prefill → metrics.
+- **`/board`** — the **Patient Context Board** (Direction A): Activity List + 5-card board (snapshot, new/updated, open workflow, limitations, source references).
 - **`/`** — the **follow-up extractor**: a note → a structured, reviewable plan.
 
 **Verify the FHIR pipeline offline** (second shell) — this is the integration story:
