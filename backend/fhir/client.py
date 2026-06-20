@@ -10,6 +10,8 @@ fixtures path (`source=fixtures`) provides an offline, deterministic scan that
 exercises the same snapshot/diff/summary pipeline.
 """
 
+from concurrent.futures import ThreadPoolExecutor
+
 import httpx
 
 DEFAULT_TYPES = [
@@ -104,13 +106,38 @@ class FHIRClient:
     def scan(
         self, patient_count: int = 5, types: list[str] | None = None,
     ) -> tuple[list[dict], list[dict]]:
-        """Return (resources, errors). errors is one record per failed per-type fetch."""
+        """Return (resources, errors). errors is one record per failed per-type fetch.
+
+        Patients are fetched concurrently via a bounded ThreadPoolExecutor (§14):
+        a live scan is ~patients × types sequential GETs, which times out against a
+        slow server. httpx.Client is thread-safe for issuing requests, so the single
+        shared self._client is reused across workers.
+
+        Content is identical to the sequential version: each patient still yields its
+        patient resource followed by that patient's resources_for_patient output, and
+        every per-type failure is surfaced into errors. Only the inter-patient ORDER
+        may differ — the diff layer keys by resource_key, so it is order-independent.
+        """
         types = types or CORE_TYPES
+        patients = self.search_patients(patient_count)
+        if not patients:
+            return [], []
+
+        def _one(patient: dict) -> tuple[list[dict], list[dict]]:
+            local_errors: list[dict] = []
+            block: list[dict] = [patient]
+            block += self.resources_for_patient(
+                patient["id"], types, errors=local_errors,
+            )
+            return block, local_errors
+
         resources: list[dict] = []
         errors: list[dict] = []
-        for patient in self.search_patients(patient_count):
-            resources.append(patient)
-            resources += self.resources_for_patient(patient["id"], types, errors=errors)
+        max_workers = min(8, len(patients))
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            for block, local_errors in pool.map(_one, patients):
+                resources += block
+                errors += local_errors
         return resources, errors
 
     def close(self):

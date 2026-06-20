@@ -18,6 +18,14 @@ def _two_scans_then_activity(client, fhir_service):
     return resp.json()
 
 
+def _one_scan_then_activity(client, fhir_service):
+    fhir_service.reset_store()
+    fhir_service.run_scan(source="fixtures", which=1)
+    resp = client.get("/api/fhir/activity")
+    assert resp.status_code == 200
+    return resp.json()
+
+
 def _by_id(rows: list[dict]) -> dict[str, dict]:
     return {r["id"]: r for r in rows}
 
@@ -94,6 +102,35 @@ def test_activity_empty_when_no_scans(client):
     resp = client.get("/api/fhir/activity")
     assert resp.status_code == 200
     assert resp.json() == []
+
+
+def test_activity_single_scan_flags_has_two_scans_false(client):
+    """After ONE scan, every row reports has_two_scans=False (UI shows dashes)."""
+    from backend.fhir import service as fhir_service
+
+    rows = _one_scan_then_activity(client, fhir_service)
+    assert rows  # at least one patient present
+    for r in rows:
+        assert r["has_two_scans"] is False
+
+    fhir_service.reset_store()
+
+
+def test_activity_two_scans_flag_true_with_real_counts(client):
+    """After TWO scans, has_two_scans=True and counts are the real numbers."""
+    from backend.fhir import service as fhir_service
+
+    rows = _two_scans_then_activity(client, fhir_service)
+    rows_by_id = _by_id(rows)
+    for r in rows:
+        assert r["has_two_scans"] is True
+
+    a = rows_by_id["synthetic-A"]
+    assert (a["new"], a["updated"], a["not_returned"]) == (1, 1, 0)
+    b = rows_by_id["synthetic-B"]
+    assert (b["new"], b["updated"], b["not_returned"]) == (1, 0, 1)
+
+    fhir_service.reset_store()
 
 
 def test_data_attention_thresholds():

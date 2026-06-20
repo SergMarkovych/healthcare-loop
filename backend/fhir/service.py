@@ -252,16 +252,20 @@ def patient_activity() -> list[dict]:
     """Per-patient activity rows for the latest scan (V4 §17.1).
 
     Each row: {id, name, new, updated, not_returned, open_workflow, last_scan,
-    data_attention}. Counts come from diff_last_two() filtered per patient
+    data_attention, has_two_scans}. has_two_scans is True iff a real predecessor
+    scan exists (prev_id is not None) — the same value on every row — so the UI
+    can distinguish a genuine zero-change two-scan state from a single scan.
+    Counts come from diff_last_two() filtered per patient
     (reusing diff.filter_for_patient), so they match /api/fhir/diff. open_workflow
     counts open Task/ServiceRequest for the patient in the latest scan. last_scan
     is the latest scan_run timestamp. Returns [] when no scans exist.
     """
     conn = store.connect()
     try:
-        _, curr_id = store.last_two_scan_ids(conn)
+        prev_id, curr_id = store.last_two_scan_ids(conn)
         if curr_id is None:
             return []
+        has_two_scans = prev_id is not None
         last_scan = _latest_scan_timestamp(conn)
         curr_rows = list(store.load_snapshot_map(conn, curr_id).values())
     finally:
@@ -302,6 +306,7 @@ def patient_activity() -> list[dict]:
             "open_workflow": open_by_patient.get(pid, 0),
             "last_scan": last_scan,
             "data_attention": _data_attention(new + updated + not_returned),
+            "has_two_scans": has_two_scans,
         })
     return rows
 

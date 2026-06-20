@@ -349,7 +349,7 @@ async function loadActivity(){
 // Re-binds row + pager handlers each call, so paging never refetches.
 function renderActivityPage(){
   const total = ACTIVITY.length;
-  const singleScan = ACTIVITY.reduce((a,r)=>a+(r.new||0)+(r.updated||0)+(r.not_returned||0),0) === 0;
+  const singleScan = ACTIVITY.length > 0 && !ACTIVITY[0].has_two_scans;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   if(PAGE < 1) PAGE = 1;
   if(PAGE > pages) PAGE = pages;
