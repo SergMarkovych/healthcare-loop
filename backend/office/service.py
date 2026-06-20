@@ -14,7 +14,7 @@ import os
 from backend import llm
 from backend.fhir import action_builder
 from backend.fhir import writer as fhir_writer
-from backend.office import forms, metrics, necessity
+from backend.office import forms, metrics, necessity, referral_intel
 from backend.office.data import DEMOGRAPHICS, REQUESTS
 from backend.synthetic_data import SAMPLES
 
@@ -62,8 +62,18 @@ def prefill_request(request_id: str) -> dict:
 
     fl = forms.build_functional_limitations(extraction, patient_context)
     form = forms.prefill_form(form_id, fl)
+
+    # Referral intelligence: if the request title or category suggests a referral,
+    # surface ranked specialist options.
+    referral_options = []
+    title_lower = req.get("title", "").lower()
+    category_lower = req.get("category", "").lower()
+    if "referral" in title_lower or "referral" in category_lower or "refer" in title_lower:
+        referral_options = referral_intel.suggest(req.get("title", ""))
+
     return {"status": "ok", "request": req, **cls, "mode": mode,
-            "patient_context": patient_context, "form": form}
+            "patient_context": patient_context, "form": form,
+            "referral_options": referral_options}
 
 
 # Follow-up action per request category — the "task" half of "draft + task".

@@ -8,10 +8,19 @@ services:
     ports:
       - "8000:8000"
     environment:
-      FORCE_MOCK: "1"               # office extractor uses the deterministic mock (no Ollama)
-      FORCE_DETERMINISTIC: "1"      # board summary stays deterministic / offline
+      # Real AI by default via OpenRouter (key supplied through .env, gitignored).
+      # If the key is missing / network is down, llm.extract falls back to the
+      # deterministic mock automatically — the demo never dead-ends.
+      LLM_PROVIDER: "openrouter"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      OPENROUTER_MODEL: "openai/gpt-4o-mini"
+      FORCE_DETERMINISTIC: "1"      # board summary stays deterministic / offline / fast
+      # Let the container reach a host-side Ollama if the user picks "Ollama".
+      OLLAMA_HOST: "http://host.docker.internal:11434"
       # Live FHIR mode (with the hapi service below + --profile live):
       # FHIR_BASE_URL: "http://hapi:8080/fhir"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   # Optional local FHIR server for the live scan/diff demo. Off by default.

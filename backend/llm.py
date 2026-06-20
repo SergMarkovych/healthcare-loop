@@ -17,12 +17,15 @@ Config via environment variables:
 import json
 import os
 
+from backend import llm_client
 from backend import mock
 from backend.schema import EncounterExtraction
 
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1")
 FORCE_MOCK = os.environ.get("FORCE_MOCK", "").lower() in ("1", "true", "yes")
+
+# Aliases so callers (e.g. main.py health endpoint) keep reading these off llm.
+OLLAMA_HOST = llm_client.OLLAMA_HOST
+OLLAMA_MODEL = llm_client.OLLAMA_MODEL
 
 SYSTEM_PROMPT = (
     "You are a clinical documentation assistant for a Canadian family medicine clinic. "
@@ -57,27 +60,17 @@ def extract(note: str, sample_id: str | None = None) -> tuple[EncounterExtractio
     if FORCE_MOCK:
         return mock.extract(note, sample_id), "mock"
 
-    try:
-        from ollama import Client
-    except ImportError:
-        return mock.extract(note, sample_id), "mock"
+    mode = "openrouter" if llm_client.LLM_PROVIDER == "openrouter" else "local-model"
 
     try:
-        client = Client(host=OLLAMA_HOST, timeout=120)
         messages = _messages(note)
         schema = EncounterExtraction.model_json_schema()
 
         last_error: Exception | None = None
         for _ in range(2):
-            resp = client.chat(
-                model=OLLAMA_MODEL,
-                messages=messages,
-                format=schema,
-                options={"temperature": 0},
-            )
-            content = resp["message"]["content"]
+            content = llm_client.call_chat(messages, schema, timeout=120)
             try:
-                return EncounterExtraction.model_validate_json(content), "local-model"
+                return EncounterExtraction.model_validate_json(content), mode
             except Exception as err:  # JSON or schema validation problem
                 last_error = err
                 messages.append({"role": "assistant", "content": content})

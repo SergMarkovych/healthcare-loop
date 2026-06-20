@@ -34,7 +34,7 @@ where judgement begins.
 
 ## Beat 3 — the measured moment (~25s)
 Show the **metric strip**: minutes saved on this batch, physician touchpoints avoided,
-and the projection — **~34 hours/year per physician**, ~2 FTE per 100 physicians.
+and the projection — **~182 hours/year per physician**, ~10 FTE per 100 physicians.
 
 *"Local, synthetic, auditable. Every number traces to a routed request. Nothing left
 the machine."*

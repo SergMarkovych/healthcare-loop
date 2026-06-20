@@ -15,13 +15,14 @@ _BASELINE = {
     "disability_tax_credit": (22, 4),     # pre-filled, physician reviews clinical fields
     "insurance_std": (15, 4),
     "school_note": (8, 2),
+    "referral_ent": (18, 3),              # manual: 18 min to find + fill referral; assisted: 3 min
 }
 
 # Rough annual volume per physician (illustrative) to project recovered capacity.
 _ANNUAL_VOLUME = {
     "sick_note": 250, "rx_renewal_stable": 1200, "monitoring_requisition": 300,
     "form_completion_admin": 200, "disability_tax_credit": 30,
-    "insurance_std": 120, "school_note": 60,
+    "insurance_std": 120, "school_note": 60, "referral_ent": 80,
 }
 _PHYSICIAN_MINUTES_PER_YEAR = 1800 * 60  # ~1800 clinical hours/yr, for FTE projection
 

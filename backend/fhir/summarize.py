@@ -11,11 +11,13 @@ treatment, or interpret whether a value is good/bad. Two defences:
      post-filter; any forbidden wording => discard the LLM text, fall back to
      deterministic. Fail safe, not fail open.
 
-Returns (board: dict, mode: 'deterministic' | 'local-model').
+Returns (board: dict, mode: 'deterministic' | 'local-model' | 'openrouter').
 """
 
 import json
 import os
+
+from backend import llm_client
 
 # Wording that implies clinical judgement. If the model emits any of these, we
 # throw its text away and use the deterministic summary instead.
@@ -26,8 +28,6 @@ _FORBIDDEN = [
     "too high", "too low", "concerning", "needs ", "worsening", "improving",
 ]
 
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1")
 FORCE_DETERMINISTIC = os.environ.get("FORCE_DETERMINISTIC", "").lower() in ("1", "true", "yes")
 
 _WORKFLOW_OPEN = {"active", "requested", "in-progress", "on-hold", "received", "accepted"}
@@ -114,11 +114,7 @@ def _passes_safety(text: str) -> bool:
 
 
 def _llm_text(board: dict) -> str | None:
-    """Optional: let a local model phrase the same facts. Returns None on any issue."""
-    try:
-        from ollama import Client
-    except ImportError:
-        return None
+    """Optional: let a model phrase the same facts. Returns None on any issue."""
     prompt = (
         "You are a chart-context summarization assistant. You are NOT a doctor. "
         "Do not diagnose, prescribe, recommend treatment, or say whether any value is "
@@ -127,15 +123,9 @@ def _llm_text(board: dict) -> str | None:
         f"{json.dumps(board, ensure_ascii=False)}"
     )
     try:
-        client = Client(host=OLLAMA_HOST, timeout=60)
-        resp = client.chat(
-            model=OLLAMA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": 0},
-        )
-        return resp["message"]["content"]
+        return llm_client.call_chat([{"role": "user", "content": prompt}], timeout=60)
     except Exception as err:
-        print(f"[fhir.summarize] local model unavailable ({err}); deterministic.")
+        print(f"[fhir.summarize] model unavailable ({err}); deterministic.")
         return None
 
 
@@ -147,7 +137,8 @@ def summarize(patient_id, patient_resource, pdiff, current_resources, requested_
         text = _llm_text(board)
         if text and _passes_safety(text):
             board["summary_text"] = text.strip()
-            return board, "local-model"
+            mode = "openrouter" if llm_client.LLM_PROVIDER == "openrouter" else "local-model"
+            return board, mode
 
     board["summary_text"] = det
     return board, "deterministic"

@@ -52,7 +52,10 @@ See [`live-fhir-demo.md`](live-fhir-demo.md) for the controlled-change diff walk
 | `FORCE_MOCK` | `1` | Office extractor uses the deterministic mock (no Ollama). |
 | `FORCE_DETERMINISTIC` | `1` | Board summary stays deterministic/offline. |
 | `FHIR_BASE_URL` | `https://hapi.fhir.org/baseR4` | FHIR server for `source=live` scans. |
-| `OLLAMA_HOST` / `OLLAMA_MODEL` | `localhost:11434` / `llama3.1` | Only if you unset the mock flags and run a local model. |
+| `LLM_PROVIDER` | `ollama` | Set to `openrouter` to use OpenRouter instead of Ollama. |
+| `OLLAMA_HOST` / `OLLAMA_MODEL` | `localhost:11434` / `llama3.1` | Ollama only — unset the mock flags first. |
+| `OPENROUTER_API_KEY` | (unset) | OpenRouter only — required when `LLM_PROVIDER=openrouter`. |
+| `OPENROUTER_MODEL` | `openai/gpt-4o-mini` | OpenRouter only — model slug from openrouter.ai. |
 
 ## Ports
 - **8000** — the app (board / office / API).

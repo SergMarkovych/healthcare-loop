@@ -28,6 +28,6 @@ diagnosis, prognosis, or interpretation is generated."* That is the whole trust 
 the board organizes source-backed facts, the physician supplies the judgement.
 
 ## Verified
-`tests/test_board.py` (7 cases) asserts the card contents and that no interpretive wording
+`tests/test_board.py` (12 cases) asserts the card contents and that no interpretive wording
 leaks; the render is browser-verified (3 cards, source refs, the dose-change line). The
 board also runs against live HAPI patients (`scripts/load_local_hapi.sh`).

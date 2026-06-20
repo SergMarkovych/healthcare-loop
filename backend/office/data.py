@@ -17,6 +17,8 @@ REQUESTS = [
      "category": "school_note", "patient_id": "synthetic-B", "sample_id": "sample-3"},
     {"id": "req-6", "title": "Routine monitoring bloodwork requisition",
      "category": "monitoring_requisition", "patient_id": "synthetic-A", "sample_id": None},
+    {"id": "req-7", "title": "Referral — pediatric ENT (hearing loss evaluation)",
+     "category": "referral_ent", "patient_id": "synthetic-B", "sample_id": "sample-4"},
 ]
 
 # Synthetic demographics (stand-in for the FHIR Patient resource) keyed by patient id.

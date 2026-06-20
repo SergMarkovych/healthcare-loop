@@ -58,8 +58,7 @@ Three UIs are served:
 
 - **`/office`** — the **Office Assistant** (Direction B MVP): necessity gate → form
   prefill → metrics. See [`docs/demo-script.md`](docs/demo-script.md).
-- **`/board`** — the **Patient Context Board** (Direction A Mini-MVP): pre-visit
-  "what changed since last visit", 3 source-backed cards. See [`docs/board-demo.md`](docs/board-demo.md).
+- **`/board`** — the **Patient Context Board** (Direction A): Activity List + 5-card board (snapshot, new/updated, open workflow, limitations, source references). See [`docs/board-demo.md`](docs/board-demo.md).
 - **`/`** — the **follow-up extractor**: a note → a structured, reviewable plan.
 
 **Verify the FHIR pipeline offline** (second shell) — this is the integration story:
@@ -73,8 +72,9 @@ curl localhost:8000/api/fhir/diff      # -> 2 new, 1 updated (metformin 500->100
 
 For the live `Synthea → local HAPI` path see [`FOUNDATION.md`](FOUNDATION.md).
 
-### Turn on the real local model
+### Turn on a real model
 
+**Option A — local Ollama (no data egress):**
 ```bash
 # 1. install Ollama:  https://ollama.com/download
 # 2. pull a model good at structured extraction:
@@ -83,13 +83,21 @@ ollama pull llama3.1            # or: qwen2.5, mistral, gpt-oss
 python run.py
 ```
 
-Now extraction is done by the local model and the badge reads **"Drafted by local
-model."** Config via env vars:
+**Option B — OpenRouter (hosted, needs an API key):**
+```bash
+LLM_PROVIDER=openrouter OPENROUTER_API_KEY=<key> python run.py
+```
+
+Now extraction is done by the model and the badge reads **"Drafted by local
+model."** (or **"openrouter"** when using Option B). Config via env vars:
 
 | Variable | Default | Notes |
 |---|---|---|
-| `OLLAMA_MODEL` | `llama3.1` | try `qwen2.5` / `mistral` / `gpt-oss` |
-| `OLLAMA_HOST` | `http://localhost:11434` | point at a remote box if needed |
+| `LLM_PROVIDER` | `ollama` | `openrouter` to route through OpenRouter |
+| `OLLAMA_MODEL` | `llama3.1` | Ollama only — try `qwen2.5` / `mistral` |
+| `OLLAMA_HOST` | `http://localhost:11434` | Ollama only — point at a remote box if needed |
+| `OPENROUTER_API_KEY` | (unset) | OpenRouter only — required |
+| `OPENROUTER_MODEL` | `openai/gpt-4o-mini` | OpenRouter only |
 | `FORCE_MOCK` | (unset) | set to `1` to demo the UI without any model |
 
 ```bash
@@ -108,8 +116,10 @@ frontend/index.html   Single-file review UI (vanilla JS, no build step).
 backend/
   schema.py           Pydantic contract the model must fill. One level deep so
                       small local models follow it reliably.
-  llm.py              Ollama call: enforces the JSON schema via `format=`,
-                      temperature 0, validate + retry once, mock fallback.
+  llm_client.py       Provider router: Ollama (default) or OpenRouter, selected
+                      by LLM_PROVIDER. Single call_chat() entry point.
+  llm.py              Extraction layer: enforces JSON schema, temperature 0,
+                      validate + retry once, mock fallback.
   mock.py             Offline extractor (canned for sample 1, keyword heuristic
                       otherwise) so the UI is demoable with no model installed.
   synthetic_data.py   Three fabricated encounter notes. No real PHI.

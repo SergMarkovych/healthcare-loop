@@ -8,6 +8,7 @@ Then open http://127.0.0.1:8000
 """
 
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
@@ -32,6 +33,10 @@ class ExtractRequest(BaseModel):
     sample_id: str | None = None
 
 
+class ProviderConfig(BaseModel):
+    provider: Literal["mock", "ollama", "openrouter"]
+
+
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
     return _FRONTEND.read_text(encoding="utf-8")
@@ -49,12 +54,57 @@ def board_ui() -> str:
 
 @app.get("/api/health")
 def health() -> dict:
+    from backend import llm_client
     return {
         "status": "ok",
-        "model": llm.OLLAMA_MODEL,
-        "host": llm.OLLAMA_HOST,
+        "provider": llm_client.LLM_PROVIDER,
+        "model": llm_client.OPENROUTER_MODEL if llm_client.LLM_PROVIDER == "openrouter" else llm_client.OLLAMA_MODEL,
+        "host": "https://openrouter.ai/api/v1" if llm_client.LLM_PROVIDER == "openrouter" else llm_client.OLLAMA_HOST,
         "force_mock": llm.FORCE_MOCK,
     }
+
+
+@app.get("/api/probe")
+def probe() -> dict:
+    from backend import llm_client
+    import httpx
+    if llm.FORCE_MOCK:
+        return {"ok": True, "provider": "mock"}
+    if llm_client.LLM_PROVIDER == "openrouter":
+        try:
+            r = httpx.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={"Authorization": f"Bearer {llm_client.OPENROUTER_API_KEY}",
+                         "Content-Type": "application/json"},
+                json={"model": llm_client.OPENROUTER_MODEL,
+                      "messages": [{"role": "user", "content": "hi"}],
+                      "max_tokens": 1},
+                timeout=8,
+            )
+            return {"ok": r.status_code == 200, "provider": "openrouter"}
+        except Exception as e:
+            return {"ok": False, "provider": "openrouter", "error": str(e)}
+    if llm_client.LLM_PROVIDER == "ollama":
+        try:
+            r = httpx.get(f"{llm_client.OLLAMA_HOST}/api/tags", timeout=3)
+            return {"ok": r.status_code == 200, "provider": "ollama"}
+        except Exception as e:
+            return {"ok": False, "provider": "ollama", "error": str(e)}
+    return {"ok": False, "provider": "unknown"}
+
+
+@app.post("/api/config")
+def set_config(req: ProviderConfig) -> dict:
+    from backend import llm_client
+    from backend.fhir import summarize as fhir_summarize
+    if req.provider == "mock":
+        llm.FORCE_MOCK = True
+        fhir_summarize.FORCE_DETERMINISTIC = True
+    else:
+        llm.FORCE_MOCK = False
+        fhir_summarize.FORCE_DETERMINISTIC = False
+        llm_client.LLM_PROVIDER = req.provider
+    return health()
 
 
 @app.get("/api/samples")

@@ -48,6 +48,11 @@
   .chip svg{display:block}
   .chip.mode-mock{color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line)}
   .chip.mode-local{color:var(--ok); background:var(--ok-bg); border-color:var(--ok)}
+  .toolnav{display:flex; align-items:center; gap:4px}
+  .toolnav a{display:inline-flex; align-items:center; font-size:12.5px; font-weight:550; text-decoration:none;
+    padding:5px 11px; border-radius:7px; border:1px solid transparent; color:var(--muted); transition:background .12s,color .12s}
+  .toolnav a:hover{color:var(--ink); background:#ECEEF1}
+  .toolnav a[aria-current="page"]{color:#0E8A6B; background:#E7F4EF; border-color:#BFE6D8; font-weight:600}
 
   /* ---------- layout ---------- */
   main{max-width:1180px; margin:0 auto; padding:22px;
@@ -148,6 +153,24 @@
 
   :focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   @media (prefers-reduced-motion:reduce){*{transition:none !important}}
+
+  .demo-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;background:#0E8A6B;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+  .demo-btn:hover{background:#0a7059}
+  .demo-next{margin-top:18px;padding:14px 18px;background:#e7f4ef;border:1px solid #BFE6D8;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .demo-next-text{font-size:14px;color:#1a5c3a;font-weight:500}
+  .demo-next-link{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#0E8A6B;color:#fff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap}
+  .demo-next-link:hover{background:#0a7059}
+
+  .provider-toggle{display:inline-flex; align-items:center; border:1px solid var(--hair); border-radius:999px; overflow:hidden; background:var(--card)}
+  .ptbtn{appearance:none; border:none; border-right:1px solid var(--hair); background:transparent; color:var(--muted); font-size:12px; font-weight:550; padding:5px 13px; cursor:pointer; transition:background .12s,color .12s; font-family:inherit; white-space:nowrap; line-height:1}
+  .ptbtn:last-child{border-right:none}
+  .ptbtn.active{background:var(--ok); color:#fff; font-weight:640}
+  .ptbtn:hover:not(.active){background:#ECEEF1; color:var(--ink)}
+  .pstatus{display:inline-flex; align-items:center; font-size:11.5px; font-weight:600; padding:4px 11px; border-radius:999px; border:1px solid; white-space:nowrap}
+  .pstatus.hidden{display:none}
+  .pstatus.checking{color:var(--muted); border-color:var(--hair); background:var(--card)}
+  .pstatus.ok{color:var(--ok); border-color:#BFE6D8; background:var(--ok-bg)}
+  .pstatus.fail{color:var(--warn); border-color:var(--warn-line); background:var(--warn-bg)}
 </style>
 </head>
 <body>
@@ -156,12 +179,23 @@
     <span class="wordmark">Loop<span class="dot">.</span></span>
     <span class="tagline">Encounter &rarr; reviewed follow-up, on your machine</span>
   </div>
-  <span id="modeChip" class="chip">Local-first</span>
-  <span class="chip" title="No encounter text leaves this device. Demo runs on synthetic data only.">
+  <nav class="toolnav" aria-label="Tools">
+    <a href="/" aria-current="page">Follow-up extractor</a>
+    <a href="/office">Office Assistant</a>
+    <a href="/board">Context Board</a>
+  </nav>
+  <button class="demo-btn" id="demoBtn" onclick="startDemo()">▶ Demo</button>
+  <div class="provider-toggle" id="providerToggle" aria-label="LLM provider">
+    <button class="ptbtn" data-p="mock" onclick="setProvider('mock')">Mock</button>
+    <button class="ptbtn" data-p="ollama" onclick="setProvider('ollama')">Ollama</button>
+    <button class="ptbtn" data-p="openrouter" onclick="setProvider('openrouter')">OpenRouter</button>
+  </div>
+  <span id="providerStatus" class="pstatus hidden"></span>
+  <span id="privacyChip" class="chip" title="No encounter text leaves this device. Demo runs on synthetic data only.">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
     </svg>
-    Runs locally · synthetic data · no PHI
+    Synthetic · no PHI
   </span>
 </header>
 
@@ -248,12 +282,41 @@ const esc = (s) => String(s ?? "")
   .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
   .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 
+function applyProvider(p){
+  document.querySelectorAll(".ptbtn").forEach(b=>b.classList.toggle("active",b.dataset.p===p));
+  const pc=$("privacyChip");
+  if(pc) pc.title=p==="openrouter"?"Synthetic data · sent to OpenRouter API · no real PHI":"No encounter text leaves this device. Demo runs on synthetic data only.";
+  const db=$("demoBtn");
+  if(db){
+    const label={mock:"Mock",ollama:"Ollama",openrouter:"OpenRouter"}[p]||p;
+    db.textContent="▶ Demo · "+label;
+    db.title="Run demo using "+label+" provider";
+  }
+}
+async function probeProvider(p){
+  const ps=$("providerStatus");
+  if(!ps) return;
+  if(p==="mock"){ps.className="pstatus hidden";return;}
+  ps.textContent="checking…"; ps.className="pstatus checking";
+  try{
+    const r=await (await fetch("/api/probe")).json();
+    ps.textContent=r.ok?"● connected":"● unreachable";
+    ps.className="pstatus "+(r.ok?"ok":"fail");
+  }catch(e){ps.textContent="● unreachable"; ps.className="pstatus fail";}
+}
+async function setProvider(p){
+  try{ await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({provider:p})}); }catch(e){}
+  applyProvider(p);
+  probeProvider(p);
+}
+
 // ---------- boot ----------
 (async function init(){
   try{
     const h = await (await fetch("/api/health")).json();
-    $("modeChip").textContent = h.force_mock ? "Mock mode (FORCE_MOCK)" : "Model: " + h.model;
-    if (h.force_mock) $("modeChip").classList.add("mode-mock");
+    const p = h.force_mock ? "mock" : h.provider;
+    applyProvider(p);
+    probeProvider(p);
   }catch(e){ /* health is optional */ }
 
   try{
@@ -306,10 +369,8 @@ async function runExtract(){
 }
 
 function setModeChip(mode){
-  const c = $("modeChip");
-  c.classList.remove("mode-mock","mode-local");
-  if(mode==="local-model"){ c.textContent="Drafted by local model"; c.classList.add("mode-local"); }
-  else { c.textContent="Drafted by mock (install Ollama for real extraction)"; c.classList.add("mode-mock"); }
+  const p = mode==="openrouter" ? "openrouter" : mode==="local-model" ? "ollama" : "mock";
+  applyProvider(p);
 }
 
 // ---------- state ----------
@@ -487,6 +548,43 @@ function runExport(){
   a.href = URL.createObjectURL(blob);
   a.download = "verified-followup.json";
   a.click(); URL.revokeObjectURL(a.href);
+}
+
+// Demo orchestration — Jordan Sample's journey
+async function startDemo() {
+  // read the active provider from the toggle
+  const activeBtn = document.querySelector('.ptbtn.active');
+  const provider = activeBtn ? activeBtn.dataset.p : 'mock';
+
+  // ensure backend matches the selected provider
+  await setProvider(provider);
+
+  const sel = document.getElementById('sampleSelect');
+  if (!sel) return;
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === 'sample-1') { sel.selectedIndex = i; break; }
+  }
+  sel.dispatchEvent(new Event('change'));
+  setTimeout(() => {
+    const note = document.getElementById('note');
+    if (note && note.value.trim()) {
+      runExtract().then(() => showDemoNext());
+    }
+  }, 300);
+}
+
+function showDemoNext() {
+  // only show if not already there
+  if (document.getElementById('demoNextBanner')) return;
+  const results = document.getElementById('results');
+  if (!results) return;
+  const banner = document.createElement('div');
+  banner.id = 'demoNextBanner';
+  banner.className = 'demo-next';
+  banner.innerHTML = `
+    <span class="demo-next-text">✓ Jordan's follow-up plan is drafted and approved. Next: process Jordan's waiting paperwork.</span>
+    <a class="demo-next-link" href="/office?demo=jordan">Office Assistant →</a>`;
+  results.after(banner);
 }
 </script>
 </body>

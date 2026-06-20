@@ -1,11 +1,12 @@
 # Patient Context Board / Office Assistant — portable container.
-# Synthetic data only; runs fully offline (no model, no network) by default.
+# Synthetic data only. Provider is chosen at runtime via docker-compose env
+# (defaults to OpenRouter with an automatic mock fallback). Board summaries stay
+# deterministic/offline by default for demo safety.
 FROM python:3.13-slim
 
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    FORCE_MOCK=1 \
     FORCE_DETERMINISTIC=1
 
 # Deps first for layer caching.

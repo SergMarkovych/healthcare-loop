@@ -50,6 +50,11 @@ _RULES = {
         "School accommodation depends on a clinical view of the patient's limitations. "
         "Pre-fill demographics and diagnosis; physician confirms the accommodation.",
     ),
+    "referral_ent": (
+        "physician_review", "physician",
+        "Specialist referral requires physician sign-off on scope and urgency. "
+        "Referral intelligence surfaces ranked specialist options for this indication.",
+    ),
 }
 
 ROUTES = ["eliminate", "delegate", "automate", "physician_review"]

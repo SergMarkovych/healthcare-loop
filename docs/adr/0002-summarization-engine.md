@@ -39,8 +39,7 @@ on synthetic data).
 model output, covered by the green test suite alongside the `rules.py` interpretive-text guard
 (`rules.py:41-53`, structurally `clinicalInterpretation: null`). **Toggles:**
 `FORCE_DETERMINISTIC=1` (container default) forces the deterministic path; `FORCE_MOCK=1`
-keeps the office extractor on the deterministic mock. Unset both + set `OLLAMA_HOST` /
-`OLLAMA_MODEL` to enable the local model.
+keeps the office extractor on the deterministic mock. Unset both to enable the LLM path. Set `LLM_PROVIDER=ollama` (default) + `OLLAMA_HOST`/`OLLAMA_MODEL` for a local model, or `LLM_PROVIDER=openrouter` + `OPENROUTER_API_KEY` for a hosted model.
 
 ## Notes
 Author: project lead · Approvers: architect / review board · Last modified: 2026-06-20.

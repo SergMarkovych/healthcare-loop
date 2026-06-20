@@ -136,8 +136,50 @@
   .payoff-foot{font-size:12.5px; color:var(--muted); margin-top:14px; padding-top:14px; border-top:1px solid var(--hair-2)}
 
   .empty{border:1px dashed var(--hair); border-radius:var(--r-md); padding:30px 22px; text-align:center; color:var(--muted); font-size:13px}
+
+  .ref-intel-card { background:#f0f7f4; border:1px solid #b2d8c8; border-radius:8px; padding:14px 16px; margin-bottom:18px; }
+  .ref-intel-header { display:flex; align-items:baseline; gap:10px; margin-bottom:10px; }
+  .ref-intel-title { font-weight:700; font-size:1rem; color:#1a5c3a; }
+  .ref-intel-sub { font-size:0.82rem; color:#555; }
+  .ref-table { width:100%; border-collapse:collapse; font-size:0.87rem; }
+  .ref-table th { text-align:left; padding:5px 8px; border-bottom:2px solid #b2d8c8; color:#444; font-weight:600; }
+  .ref-table td { padding:6px 8px; border-bottom:1px solid #dce8e2; }
+  .ref-row { cursor:pointer; }
+  .ref-row:hover { background:#e2f2ec; }
+  .ref-row.selected { background:#c8ead8; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:0.78rem; font-weight:600; }
+  .badge-green { background:#d4edda; color:#155724; }
+  .badge-amber { background:#fff3cd; color:#856404; }
+  .badge-red { background:#f8d7da; color:#721c24; }
+
+  .differentiation-bar { border-left:3px solid #4a90d9; background:#eef4fb; color:#1a3a5c; font-size:0.84rem; padding:8px 12px; border-radius:0 6px 6px 0; margin-bottom:14px; }
+
+  .vs-comparison { margin-top:20px; border:1px solid #d0d7de; border-radius:8px; padding:14px 16px; background:#fafafa; }
+  .vs-title { font-weight:700; font-size:0.93rem; margin-bottom:10px; color:#333; }
+  .vs-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+  .vs-table th { background:#f0f0f0; padding:6px 10px; text-align:left; border:1px solid #d0d7de; }
+  .vs-table td { padding:8px 10px; border:1px solid #d0d7de; vertical-align:top; }
+  .vs-table tr td:last-child { color:#1a5c3a; }
   :focus-visible{outline:2px solid var(--focus); outline-offset:2px; border-radius:3px}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+  .demo-ctx{background:#fff8e1;border-left:4px solid #f5a623;padding:10px 16px;font-size:13px;color:#7a5800;font-weight:500;display:flex;align-items:center;gap:8px}
+  .demo-ctx-label{font-weight:700}
+  .demo-next{margin-top:24px;padding:14px 18px;background:#e7f4ef;border:1px solid #BFE6D8;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .demo-next-text{font-size:14px;color:#1a5c3a;font-weight:500}
+  .demo-next-link{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#0E8A6B;color:#fff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap}
+  .demo-next-link:hover{background:#0a7059}
+
+  .provider-toggle{display:inline-flex; align-items:center; border:1px solid var(--hair); border-radius:999px; overflow:hidden; background:var(--surface)}
+  .ptbtn{appearance:none; border:none; border-right:1px solid var(--hair); background:transparent; color:var(--muted); font-size:12px; font-weight:550; padding:5px 13px; cursor:pointer; transition:background .12s,color .12s; font-family:inherit; white-space:nowrap; line-height:1}
+  .ptbtn:last-child{border-right:none}
+  .ptbtn.active{background:var(--teal); color:#fff; font-weight:640}
+  .ptbtn:hover:not(.active){background:var(--surface-2); color:var(--ink)}
+  .pstatus{display:inline-flex; align-items:center; font-size:11.5px; font-weight:600; padding:4px 11px; border-radius:999px; border:1px solid; white-space:nowrap; transition:opacity .15s}
+  .pstatus.hidden{display:none}
+  .pstatus.checking{color:var(--muted); border-color:var(--hair); background:var(--surface-2)}
+  .pstatus.ok{color:var(--teal-2); border-color:#BFE6D8; background:var(--teal-bg)}
+  .pstatus.fail{color:var(--amber); border-color:rgba(168,74,7,.25); background:var(--amber-bg)}
 </style>
 </head>
 <body>
@@ -150,13 +192,19 @@
     </span>
   </div>
   <nav class="toolnav" aria-label="Tools">
+    <a href="/">Follow-up extractor</a>
     <a href="/board">Context Board</a>
     <a href="/office" aria-current="page">Office Assistant</a>
   </nav>
-  <span id="modeChip" class="chip">Local-first</span>
-  <span class="chip" title="Synthetic data only · no PHI leaves this device">
+  <div class="provider-toggle" id="providerToggle" aria-label="LLM provider">
+    <button class="ptbtn" data-p="mock" onclick="setProvider('mock')">Mock</button>
+    <button class="ptbtn" data-p="ollama" onclick="setProvider('ollama')">Ollama</button>
+    <button class="ptbtn" data-p="openrouter" onclick="setProvider('openrouter')">OpenRouter</button>
+  </div>
+  <span id="providerStatus" class="pstatus hidden"></span>
+  <span id="privacyChip" class="chip" title="Synthetic data only · no PHI leaves this device">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
-    Synthetic · local · no PHI
+    Synthetic · no PHI
   </span>
 </header>
 
@@ -191,8 +239,30 @@ const CAPTIONS={
 };
 const ROUTE_LABEL={eliminate:"Eliminate",delegate:"Delegate",automate:"Automate",physician_review:"Physician review"};
 
+function applyProvider(p){
+  document.querySelectorAll(".ptbtn").forEach(b=>b.classList.toggle("active",b.dataset.p===p));
+  const pc=$("privacyChip");
+  if(pc) pc.title=p==="openrouter"?"Synthetic data · sent to OpenRouter API · no real PHI":"Synthetic data only · no PHI leaves this device";
+}
+async function probeProvider(p){
+  const ps=$("providerStatus");
+  if(!ps) return;
+  if(p==="mock"){ps.className="pstatus hidden";return;}
+  ps.textContent="checking…"; ps.className="pstatus checking";
+  try{
+    const r=await (await fetch("/api/probe")).json();
+    ps.textContent=r.ok?"● connected":"● unreachable";
+    ps.className="pstatus "+(r.ok?"ok":"fail");
+  }catch(e){ps.textContent="● unreachable"; ps.className="pstatus fail";}
+}
+async function setProvider(p){
+  try{ await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({provider:p})}); }catch(e){}
+  applyProvider(p);
+  probeProvider(p);
+}
+
 (async function init(){
-  try{ const h=await (await fetch("/api/health")).json(); $("modeChip").textContent=h.force_mock?"Mock mode":"Model: "+h.model; }catch(e){}
+  try{ const h=await (await fetch("/api/health")).json(); const p=h.force_mock?"mock":h.provider; applyProvider(p); probeProvider(p); }catch(e){}
   try{ QUEUE=await (await fetch("/api/office/requests")).json(); }catch(e){ QUEUE=[]; }
   AUTO=QUEUE.filter(r=>r.route!=="physician_review");
   PHYS=QUEUE.filter(r=>r.route==="physician_review");
@@ -226,6 +296,9 @@ function reqCard(req, tail){
 function renderTriage(){
   $("stage").innerHTML=`<div class="stagepanel">
     <h2>Triage the inbox</h2>
+    <div class="differentiation-bar">
+      The inbox manager routes and labels documents. Loop acts on them — generates the referral, pre-fills the form, queues the follow-up.
+    </div>
     <p class="lead">${QUEUE.length} requests came in. The necessity gate already decided which ones need a physician.</p>
     <div class="grouplabel">Handled without you — ${AUTO.length}</div>
     <div id="autoGroup">${AUTO.map(r=>reqCard(r)).join("")}</div>
@@ -301,7 +374,25 @@ async function renderReview(){
       : `<div class="prov"><span class="conf ${fld.confidence==='low'?'low':''}">${esc(fld.confidence)} confidence</span>${fld.evidence?`<span class="ev">from note: ${esc(fld.evidence)}</span>`:``}</div>`;
     return `<div class="field ${fld.needs_physician?'md':'auto'}"><label for="f-${fid}">${esc(fld.label)}</label>${ctl}${prov}</div>`;
   };
+  const opts=Array.isArray(data.referral_options)?data.referral_options:[];
+  const riskBadge=(r)=>{ const cls=r==="low"?"badge-green":r==="high"?"badge-red":"badge-amber"; return `<span class="badge ${cls}">${esc(r)}</span>`; };
+  const refCard = opts.length>0 ? `<div class="ref-intel-card">
+    <div class="ref-intel-header">
+      <span class="ref-intel-title">Suggested specialists</span>
+      <span class="ref-intel-sub">Loop matched ${opts.length} option(s) for this referral — click a row to pre-fill "Referred to"</span>
+    </div>
+    <table class="ref-table">
+      <thead><tr><th>Specialist</th><th>Clinic</th><th>Accepts scope</th><th>Rejection risk</th></tr></thead>
+      <tbody>${opts.map(o=>`<tr class="ref-row" title="${esc(o.notes)}" onclick="selectSpecialist('${esc(o.specialist_name).replace(/'/g,"\\'")}','${esc(o.clinic).replace(/'/g,"\\'")}')">
+        <td>${esc(o.specialist_name)}</td>
+        <td>${esc(o.clinic)}</td>
+        <td>${o.accepts_scope?'<span class="badge badge-green">Yes</span>':'<span class="badge badge-amber">No</span>'}</td>
+        <td>${riskBadge(o.rejection_risk)}</td>
+      </tr>`).join("")}</tbody>
+    </table>
+  </div>` : "";
   $("stage").innerHTML=`<div class="stagepanel">
+    ${refCard}
     <h2>${esc(f.title)}</h2>
     <p class="lead">${f.auto_filled} field(s) pre-filled from the chart · ${md.length} need your clinical judgement.</p>
     <div class="counter" id="counter" aria-live="polite"></div>
@@ -315,6 +406,12 @@ async function renderReview(){
   $("approveBtn").addEventListener("click", ()=>approveForm(req));
   updateCounter();
   focusHeading();
+}
+function selectSpecialist(name, clinic) {
+  const inp = document.getElementById('f-referred_to');
+  if (inp) { inp.value = name + ' — ' + clinic; inp.dispatchEvent(new Event('input')); }
+  document.querySelectorAll('.ref-row').forEach(r => r.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
 }
 function mdEls(){ return Array.from($("stage").querySelectorAll('[data-md="1"]')); }
 function updateCounter(){
@@ -371,6 +468,16 @@ async function renderPayoff(){
       <div class="metric"><div class="num" id="mFte">0</div><div class="lbl">projected FTE per 100 physicians</div></div>
     </div>
     <div class="ledger">${ledger}</div>
+    <div class="vs-comparison">
+      <div class="vs-title">What Loop did vs the inbox manager</div>
+      <table class="vs-table">
+        <tr><th>Inbox manager</th><th>Loop</th></tr>
+        <tr>
+          <td>Routed documents · Flagged urgent · Assigned to physician</td>
+          <td>Generated draft · Pre-filled form from chart · Created follow-up task · Wrote to FHIR · Cleared items from your desk</td>
+        </tr>
+      </table>
+    </div>
     <div class="payoff-foot">Every draft and task above is real output your staff can act on now.</div>
   </div>`;
   // Single source of truth: the backend aggregates the same processed list. Don't
@@ -379,6 +486,19 @@ async function renderPayoff(){
   animateNum("mMin",proj.minutes_saved_now||0); animateNum("mTouch",proj.physician_touchpoints_avoided||0);
   animateNum("mHours",proj.projected_annual_hours_per_physician||0); animateNum("mFte",proj.projected_fte_per_100_physicians||0);
   focusHeading();
+  // demo handoff banner
+  if (new URLSearchParams(location.search).get('demo') === 'jordan') {
+    setTimeout(() => {
+      const stage = document.getElementById('stage');
+      if (!stage || stage.querySelector('.demo-next')) return;
+      const banner = document.createElement('div');
+      banner.className = 'demo-next';
+      banner.innerHTML = `
+        <span class="demo-next-text">✓ Jordan's requests cleared. Next: see Jordan's pre-visit board before the follow-up appointment.</span>
+        <a class="demo-next-link" href="/board?demo=jordan">Context Board →</a>`;
+      stage.appendChild(banner);
+    }, 300);
+  }
 }
 function animateNum(id,target){
   const el=$(id); if(!el) return; const isF=!Number.isInteger(target); let start=null;
@@ -386,6 +506,25 @@ function animateNum(id,target){
     el.textContent=isF?v.toFixed(1):String(Math.round(v)); if(p<1) requestAnimationFrame(step); else el.textContent=String(target); };
   requestAnimationFrame(step);
 }
+
+// Demo mode — auto-play Jordan Sample's case
+(function initDemoMode() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('demo') !== 'jordan') return;
+
+  // inject context bar at the top of <main> (or just below <header>)
+  const bar = document.createElement('div');
+  bar.className = 'demo-ctx';
+  bar.innerHTML = '<span class="demo-ctx-label">Demo:</span> Continuing Jordan Sample\'s case — processing waiting admin requests';
+  const main = document.querySelector('main') || document.body;
+  main.insertBefore(bar, main.firstChild);
+
+  // the wizard's own init() already calls go(1) once the queue loads; re-assert step 1
+  setTimeout(() => {
+    if (typeof go === 'function') go(1);
+    else if (typeof renderTriage === 'function') renderTriage();
+  }, 400);
+})();
 </script>
 </body>
 </html>

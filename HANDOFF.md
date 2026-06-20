@@ -9,7 +9,7 @@ cd healthcare-loop
 python -m venv .venv && .venv/Scripts/activate   # (Win) | source .venv/bin/activate (mac/linux)
 pip install -r requirements.txt -r requirements-dev.txt
 python run.py            # -> http://127.0.0.1:8000   ( /board , /office , / )
-python -m pytest -q      # 90 passed, 2 skipped
+python -m pytest -q      # 102 passed, 2 skipped
 # or fully containerized:  docker compose up --build
 ```
 Synthetic data only, runs fully offline. See `docs/DEPLOY.md`, `docs/live-fhir-demo.md`.

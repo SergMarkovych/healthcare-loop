@@ -126,21 +126,15 @@ simplicity**. Scalability/performance are explicit non-goals (single-user demo).
 | fhir.rules | Source-backed data/workflow flags (§15) | `backend/fhir/rules.py` |
 | fhir.summarize | Safe deterministic/LLM board summary + safety filter | `backend/fhir/summarize.py` |
 | fhir.service | Orchestrate scan → snapshot → diff → context | `backend/fhir/service.py` |
-| board.service / cards | Assemble the 3-card Context Board | `backend/board/service.py`, `backend/board/cards.py` |
+| board.service / cards | Assemble the 5-card V4 Context Board | `backend/board/service.py`, `backend/board/cards.py` |
+| fhir.sources | Config-driven sources registry (3 active FHIR + 6 roadmap stubs) | `backend/fhir/sources.py`, `config/sources.json` |
 | office.necessity | Route a request (eliminate/delegate/automate/physician_review) | `backend/office/necessity.py` |
 | office.forms | Canonical record + form registry + prefill (clinical fields flagged) | `backend/office/forms.py` |
 | office.metrics | Saved-minutes / touchpoints / FTE projection | `backend/office/metrics.py` |
 | office.service | Orchestrate triage → prefill → approve(draft+task) → metrics | `backend/office/service.py` |
-| UIs | `/board`, `/office`, `/` | `frontend/board.html`, `office.html`, `index.html` |
-| UI design system | "Clinical-precision SaaS" tokens (see below) | `frontend/board.html` `:root`, `docs/design/v4-board-ui.md` |
-
-### Components (planned — V4 target, not yet built)
-| Component | Change | Key Files (target) |
-|---|---|---|
-| board.cards | 3-card → **5-card** V4 shape (New/Updated with prev→current + source query; Not-Returned & API Limitations; Source References) | `backend/board/cards.py` |
-| Patient Activity List | New Screen-1 endpoint + UI: per-patient counts + data-attention level | `backend/fhir/service.py`, `backend/main.py`, `frontend/board.html` |
-| sources config | Config-driven sources registry (FHIR live/local/fixtures + roadmap stubs) — V4 §18 | `config/sources.*` (new) |
-| Office UI | Apply the clinical-precision design system to `office.html` for parity | `frontend/office.html` |
+| llm_client | Provider router: Ollama (default) + OpenRouter (`LLM_PROVIDER=openrouter`); single `call_chat()` entry point | `backend/llm_client.py` |
+| UIs | `/board` (5-card + Activity List), `/office` (guided 5-step wizard), `/` | `frontend/board.html`, `office.html`, `index.html` |
+| UI design system | "Clinical-precision SaaS" tokens; WCAG 2.2 AA palette | `frontend/board.html` `:root`, `docs/design/v4-board-ui.md` |
 
 ## Data Model Changes
 
@@ -170,30 +164,26 @@ SQLite, created/upgraded in `backend/fhir/store.py:40-92` (fresh `CREATE TABLE` 
 | GET | `/api/fhir/patients` | patients in latest scan |
 | GET | `/api/fhir/context/{patient_id}` | safe source-backed context board (rich 5-section shape) |
 | POST | `/api/fhir/reset` | clear the snapshot store |
-| GET | `/api/board/{patient_id}` | 3-card Patient Context Board |
+| GET | `/api/fhir/activity` | per-patient change counts + data-attention level (Activity List) |
+| GET | `/api/sources` | config-driven sources registry (active + roadmap stubs) |
+| GET | `/api/board/{patient_id}` | 5-card V4 Patient Context Board |
 | GET | `/api/office/requests` | triaged request queue |
 | POST | `/api/office/prefill` | `{request_id}` → form prefill |
 | POST | `/api/office/approve` | `{request_id, completed_fields}` → draft + follow-up task |
 | POST | `/api/office/metrics` | `{processed[]}` → saved-minutes projection |
 
-### Endpoints (planned)
-| Method | Endpoint | Change |
-|---|---|---|
-| GET | `/api/fhir/activity` | New — per-patient change counts + data-attention level (Activity List, V4 §17.1) |
-| GET | `/api/board/{id}` | Extend payload to the 5-card V4 shape (prev→current, limitations, sources) |
-
 ### UI design system (built — `frontend/board.html` `:root`)
 Cool-tinted neutrals + a single teal trust accent (`--teal #0E8A6B`), Inter type, monospace
 **source chips** as the provenance signature, subtle depth, generous whitespace. Status =
-**label + icon + color** (never color alone). Target WCAG 2.2 AA (4.5:1 text / 3:1 UI).
-Full spec + the planned Activity-List + 5-card views: `docs/design/v4-board-ui.md`.
+**label + icon + color** (never color alone). WCAG 2.2 AA (4.5:1 text / 3:1 UI).
+Full spec: `docs/design/v4-board-ui.md`. Office wizard flow: `docs/design/office-wizard.md`.
 
 <constraints>
 
 ## Security Considerations
 - **Synthetic / de-identified data only; no PHI.** Real data is governed by PHIPA and is out of scope for the MVP.
 - **No authentication / authorization** in the MVP (single-user, local). RBAC/audit/encryption/retention are the production roadmap.
-- **Local-first:** when a model is used it runs on `localhost` (Ollama); no patient data leaves the machine. Treat fetched FHIR content as data, not instructions.
+- **Local-first (default):** when Ollama is used (`LLM_PROVIDER=ollama`, the default), no patient data leaves the machine. OpenRouter (`LLM_PROVIDER=openrouter`) is available for hosted inference — on that path text is sent to openrouter.ai; the synthetic-data-only constraint is mandatory on that path. Treat fetched FHIR content as data, not instructions.
 
 ## Performance Considerations
 - Single-user demo: SQLite, synchronous calls, no caching needed. Scalability/performance are explicit non-goals.
@@ -235,7 +225,6 @@ sequenceDiagram
 ```
 
 ## Verification status (keep current; updated 2026-06-20)
-- **Built + verified (66 pytest green):** FHIR foundation (scan / snapshot / content-hash diff / persisted `resource_diff` / `/metadata` gate / Bundle pagination), rules engine, safe summary, office necessity/prefill/approve/metrics, **5-card Context Board + rules `flags[]`**, **Patient Activity List `GET /api/fhir/activity`**, **config sources registry `config/sources.json` + `GET /api/sources`** (3 active FHIR + 6 roadmap). Live-verified via curl: 5-card board, activity, sources. Office approve flow + board render browser-verified (Playwright). Live FHIR scan/diff/context verified against HAPI.
-- **In progress:** the 2-view board UI (Activity List screen + 5-card render, AB#622/624); browser verify both views (AB#625).
-- **Accessibility:** palette contrast measured against WCAG 2.2 AA. 3 tokens adjusted to pass (`--faint` #9AA4B2→#697283, `--teal` #0E8A6B→#0C7E61, `--amber` #B45309→#A84A07); being applied to `board.html` + `office.html` + the UI spec.
+- **Built + verified (102 passed + 2 skipped):** FHIR foundation (scan / snapshot / content-hash diff / persisted `resource_diff` / `/metadata` gate / Bundle pagination), rules engine, safe summary, office necessity/prefill/approve/metrics, **5-card Context Board + rules `flags[]`**, **Patient Activity List `GET /api/fhir/activity`**, **config sources registry `config/sources.json` + `GET /api/sources`** (3 active FHIR + 6 roadmap), **Office Assistant guided 5-step wizard** (AB#648 — Triage → Your desk → Review → Approve → Done; metrics fix; a11y; browser-verified 1280px + 800px). Docker build verified (`docker compose up --build`). Live FHIR scan/diff/context/write-back verified against HAPI.
+- **Accessibility:** WCAG 2.2 AA palette applied (`board.html`, `office.html`); 3 tokens adjusted (`--faint` #9AA4B2→#697283, `--teal` #0E8A6B→#0C7E61, `--amber` #B45309→#A84A07). Minor remaining gaps: `aria-current` on step rail; decorative ✓ SVGs lack `aria-hidden` (non-blocking).
 - **Deferred (roadmap):** SMART on FHIR, CDS Hooks, Health Canada DPD/CCDD, MIMIC-IV, MTSamples, production .NET/PostgreSQL stack (ADO AB#615).

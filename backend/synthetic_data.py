@@ -64,4 +64,22 @@ SAMPLES = [
             "- Safety: advised to seek urgent help or go to the ER if any thoughts of self-harm arise."
         ),
     },
+    {
+        "id": "sample-4",
+        "title": "Pediatric hearing concern — ENT referral",
+        "note": (
+            "Family Medicine — new concern (SYNTHETIC)\n"
+            "Patient: Alex Demo, 8. Parent reports the child seems to be hearing less well over the past "
+            "few months, asks for things to be repeated, and turns the TV up loud.\n\n"
+            "S: Gradual onset, no ear pain or discharge currently. Several ear infections as a toddler. "
+            "Recent failed school hearing screen. No dizziness. Speech development otherwise on track.\n\n"
+            "O: Tympanic membranes dull bilaterally, reduced mobility suggestive of middle-ear effusion. "
+            "Whisper test reduced on the right.\n\n"
+            "A/P: Suspected persistent otitis media with effusion and associated hearing loss.\n"
+            "- Refer to pediatric ENT (otolaryngology) for assessment and formal audiology.\n"
+            "- Reason for referral: pediatric hearing loss evaluation.\n"
+            "- Advise parent to watch for ear pain, fever, or balance problems and return if they appear.\n"
+            "- Follow up after ENT assessment to coordinate next steps."
+        ),
+    },
 ]

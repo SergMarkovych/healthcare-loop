@@ -22,6 +22,7 @@ CANONICAL_FIELDS = [
     "patient_name", "date_of_birth", "diagnosis", "current_medications",
     "onset_date", "functional_limitations", "expected_duration",
     "prognosis", "work_capacity", "school_capacity",
+    "referred_to", "referral_reason", "urgency",
 ]
 
 
@@ -67,6 +68,10 @@ def build_functional_limitations(extraction: EncounterExtraction, patient_contex
     fl["prognosis"] = _field("", "physician", "low", "Requires your clinical judgement", True)
     fl["work_capacity"] = _field("", "physician", "low", "Requires your clinical judgement", True)
     fl["school_capacity"] = _field("", "physician", "low", "Requires your clinical judgement", True)
+
+    fl["referred_to"] = _field("", "physician", "low", "Select from suggested specialists", True)
+    fl["referral_reason"] = _field("Hearing loss evaluation — pediatric", "auto", "medium", "Request title", False)
+    fl["urgency"] = _field("", "physician", "low", "Requires your clinical judgement", True)
     return fl
 
 
@@ -87,6 +92,11 @@ FORMS = {
         "fields": ["patient_name", "date_of_birth", "diagnosis",
                    "school_capacity", "expected_duration"],
     },
+    "referral_ent": {
+        "title": "ENT referral — hearing loss evaluation",
+        "fields": ["patient_name", "date_of_birth", "diagnosis", "referred_to",
+                   "referral_reason", "urgency"],
+    },
 }
 
 FIELD_LABELS = {
@@ -95,6 +105,8 @@ FIELD_LABELS = {
     "onset_date": "Date of onset", "functional_limitations": "Functional limitations",
     "expected_duration": "Expected duration", "prognosis": "Prognosis",
     "work_capacity": "Work capacity / restrictions", "school_capacity": "School capacity / restrictions",
+    "referred_to": "Referred to (specialist)", "referral_reason": "Reason for referral",
+    "urgency": "Urgency",
 }
 
 
