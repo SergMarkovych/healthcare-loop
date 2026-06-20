@@ -14,6 +14,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from backend import llm
+from backend.board import service as board_service
 from backend.fhir import service as fhir_service
 from backend.office import service as office_service
 from backend.synthetic_data import SAMPLES
@@ -36,6 +37,11 @@ def index() -> str:
 @app.get("/office", response_class=HTMLResponse)
 def office_ui() -> str:
     return (_FRONTEND.parent / "office.html").read_text(encoding="utf-8")
+
+
+@app.get("/board", response_class=HTMLResponse)
+def board_ui() -> str:
+    return (_FRONTEND.parent / "board.html").read_text(encoding="utf-8")
 
 
 @app.get("/api/health")
@@ -100,6 +106,11 @@ def fhir_context(patient_id: str) -> dict:
 def fhir_reset() -> dict:
     fhir_service.reset_store()
     return {"status": "reset"}
+
+
+@app.get("/api/board/{patient_id}")
+def board(patient_id: str) -> dict:
+    return board_service.get_board(patient_id)
 
 
 # --- Digital medical office assistant (challenge area #5) ---

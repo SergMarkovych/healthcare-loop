@@ -115,6 +115,30 @@ def build_context(patient_id: str) -> dict:
     return {"status": "ok", "mode": mode, "board": board}
 
 
+def current_resources_for_patient(patient_id: str) -> tuple[dict | None, list[dict]]:
+    """Latest-scan resources for one patient: (patient_resource, all_resources).
+
+    Returns (None, []) when no scan exists yet — same no_scans signal as build_context.
+    """
+    conn = store.connect()
+    try:
+        _, curr_id = store.last_two_scan_ids(conn)
+        if curr_id is None:
+            return None, []
+        curr_rows = store.load_snapshot_map(conn, curr_id).values()
+    finally:
+        conn.close()
+
+    resources, patient_resource = [], None
+    for r in curr_rows:
+        body = json.loads(r["body"])
+        if r["patient_id"] == patient_id or body.get("id") == patient_id:
+            resources.append(body)
+            if body.get("resourceType") == "Patient":
+                patient_resource = body
+    return patient_resource, resources
+
+
 def _name(patient: dict) -> str:
     names = patient.get("name") or []
     if names:

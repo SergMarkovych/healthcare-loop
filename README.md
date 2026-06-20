@@ -54,10 +54,12 @@ pip install -r requirements.txt
 python run.py                       # -> http://127.0.0.1:8000
 ```
 
-Two UIs are served:
+Three UIs are served:
 
 - **`/office`** — the **Office Assistant** (Direction B MVP): necessity gate → form
-  prefill → metrics. This is the primary demo.
+  prefill → metrics. See [`docs/demo-script.md`](docs/demo-script.md).
+- **`/board`** — the **Patient Context Board** (Direction A Mini-MVP): pre-visit
+  "what changed since last visit", 3 source-backed cards. See [`docs/board-demo.md`](docs/board-demo.md).
 - **`/`** — the **follow-up extractor**: a note → a structured, reviewable plan.
 
 **Verify the FHIR pipeline offline** (second shell) — this is the integration story:

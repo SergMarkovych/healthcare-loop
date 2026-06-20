@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Patient Context Board — Loop</title>
+<style>
+  :root{
+    --paper:#F5F6F8; --card:#FFFFFF; --ink:#1A2330; --ink-2:#101620;
+    --muted:#5A6675; --faint:#8B95A3; --hair:#DDE2E9;
+    --teal:#0E8A6B; --teal-bg:#E5F4EE;
+    --amber:#9A6B14; --amber-bg:#FBF1DC; --amber-line:#E0C079;
+    --slate:#3E5C8A; --slate-bg:#E8EEF7;
+    --focus:#2D6CDF;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{font-family:var(--sans); color:var(--ink); background:var(--paper); -webkit-font-smoothing:antialiased; line-height:1.45}
+  header{position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:13px 20px; background:rgba(245,246,248,.9); backdrop-filter:blur(8px); border-bottom:1px solid var(--hair)}
+  .brand{margin-right:auto; display:flex; align-items:baseline; gap:10px}
+  .wordmark{font-size:18px; font-weight:680; letter-spacing:-.02em; color:var(--ink-2)}
+  .wordmark .dot{color:var(--teal)}
+  .sub{font-size:13px; color:var(--muted)}
+  .chip{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:560; padding:5px 10px;
+    border-radius:999px; border:1px solid var(--hair); background:var(--card); color:var(--muted); white-space:nowrap}
+  main{max-width:1180px; margin:0 auto; padding:18px 20px 60px}
+
+  .grid{display:grid; grid-template-columns:300px 1fr; gap:18px; align-items:start}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--card); border:1px solid var(--hair); border-radius:14px; padding:16px}
+  .panel h2{margin:0 0 4px; font-size:15px; font-weight:640}
+  .panel .hint{font-size:12.5px; color:var(--muted); margin:0 0 12px}
+
+  button{font-family:inherit; cursor:pointer}
+  .btn{appearance:none; border:1px solid var(--ink-2); background:var(--ink-2); color:#fff; font-size:13px; font-weight:600;
+    padding:8px 14px; border-radius:9px; transition:background .12s}
+  .btn:hover{background:#000}
+  .btn.ghost{background:var(--card); color:var(--ink); border-color:var(--hair)}
+  .btn[disabled]{opacity:.5; cursor:default}
+
+  .plist{list-style:none; margin:0; padding:0}
+  .plist li{border:1px solid var(--hair); border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer; transition:border-color .12s,background .12s}
+  .plist li:hover{border-color:var(--slate)}
+  .plist li.sel{border-color:var(--teal); background:var(--teal-bg)}
+  .plist .pn{font-weight:600; font-size:14px}
+  .plist .pid{font-size:11.5px; color:var(--faint); font-family:var(--mono)}
+
+  .empty{border:1px dashed var(--hair); border-radius:12px; padding:30px 20px; text-align:center; color:var(--muted); font-size:13.5px}
+  .empty .big{display:block; font-size:15px; font-weight:600; color:var(--ink); margin-bottom:5px}
+
+  .ccard{border:1px solid var(--hair); border-radius:13px; padding:14px 16px; margin-bottom:14px}
+  .ccard.c-attention{border-left:3px solid var(--amber-line)}
+  .ccard.c-patient_snapshot{border-left:3px solid var(--teal)}
+  .ccard.c-review_queue{border-left:3px solid var(--slate)}
+  .ccard h3{margin:0 0 10px; font-size:14.5px; font-weight:660}
+  .item{display:flex; gap:10px; align-items:baseline; padding:7px 0; border-top:1px solid #EEF1F5}
+  .item:first-of-type{border-top:0}
+  .item .txt{flex:1; font-size:13.5px}
+  .src{font-family:var(--mono); font-size:10.5px; color:var(--muted); background:#F1F3F6; border:1px solid var(--hair);
+    border-radius:999px; padding:2px 8px; white-space:nowrap}
+  .restate{font-size:11.5px; color:var(--faint); margin-top:10px; display:flex; align-items:center; gap:6px}
+  :focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="wordmark">Loop<span class="dot">.</span> Patient Context Board</span>
+    <span class="sub">Pre-visit · what changed since last visit · source-backed</span>
+  </div>
+  <span id="modeChip" class="chip">Local-first</span>
+  <span class="chip" title="Synthetic data only · no PHI leaves this device">Synthetic · local · no PHI</span>
+</header>
+
+<main>
+  <div class="grid">
+    <section class="panel">
+      <h2>Patients</h2>
+      <p class="hint">From the latest FHIR scan. Pick one to assemble its board.</p>
+      <div id="patients"><div class="empty"><span class="big">No scan yet</span>Load the synthetic scans to begin.</div></div>
+      <div style="margin-top:12px"><button class="btn ghost" id="loadBtn">Load synthetic scans</button></div>
+    </section>
+
+    <section class="panel">
+      <h2>Context</h2>
+      <p class="hint">Three cards, assembled only from FHIR-API data. Every line cites its source; nothing clinical is invented.</p>
+      <div id="board">
+        <div class="empty"><span class="big">Select a patient</span>Their snapshot, what needs a glance, and the review queue appear here.</div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+"use strict";
+const $ = (id)=>document.getElementById(id);
+const esc = (s)=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+let SELECTED = null;
+
+(async function init(){
+  try{ const h = await (await fetch("/api/health")).json();
+       $("modeChip").textContent = h.force_mock ? "Mock mode" : "Model: " + h.model; }catch(e){}
+  loadPatients();
+})();
+
+$("loadBtn").addEventListener("click", async ()=>{
+  $("loadBtn").disabled = true; $("loadBtn").textContent = "Loading…";
+  try{
+    await fetch("/api/fhir/reset",{method:"POST"});
+    await fetch("/api/fhir/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:"fixtures",which:1})});
+    await fetch("/api/fhir/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:"fixtures",which:2})});
+  }catch(e){}
+  $("loadBtn").disabled = false; $("loadBtn").textContent = "Reload synthetic scans";
+  loadPatients();
+});
+
+async function loadPatients(){
+  let pts = [];
+  try{ pts = await (await fetch("/api/fhir/patients")).json(); }catch(e){}
+  if(!pts.length){ $("patients").innerHTML = `<div class="empty"><span class="big">No scan yet</span>Load the synthetic scans to begin.</div>`; return; }
+  $("patients").innerHTML = `<ul class="plist">${pts.map(p=>
+    `<li data-id="${esc(p.id)}"><div class="pn">${esc(p.name)}</div><div class="pid">${esc(p.id)}</div></li>`).join("")}</ul>`;
+  $("patients").querySelectorAll("li").forEach(li=>li.addEventListener("click", ()=>openPatient(li.dataset.id)));
+}
+
+async function openPatient(id){
+  SELECTED = id;
+  $("patients").querySelectorAll("li").forEach(li=>li.classList.toggle("sel", li.dataset.id===id));
+  $("board").innerHTML = `<div class="empty">Assembling board…</div>`;
+  let data;
+  try{ data = await (await fetch("/api/board/"+encodeURIComponent(id))).json(); }
+  catch(e){ $("board").innerHTML = `<div class="empty">Couldn't reach the backend.</div>`; return; }
+  if(data.status!=="ok"){ $("board").innerHTML = `<div class="empty">No board for this patient yet — run a scan.</div>`; return; }
+  renderBoard(data);
+}
+
+function renderBoard(data){
+  const cards = data.cards.map(c=>{
+    const items = c.items.map(it=>`<div class="item"><span class="txt">${esc(it.text)}</span>
+      ${it.source_reference?`<span class="src">${esc(it.source_reference)}</span>`:``}</div>`).join("");
+    return `<div class="ccard c-${esc(c.id)}"><h3>${esc(c.title)}</h3>${items||'<div class="item"><span class="txt" style="color:var(--faint)">Nothing to show.</span></div>'}</div>`;
+  }).join("");
+  $("board").innerHTML = cards + `<div class="restate">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    Every line above restates a FHIR-API fact and cites its source. No diagnosis, prognosis, or interpretation is generated.</div>`;
+}
+</script>
+</body>
+</html>
