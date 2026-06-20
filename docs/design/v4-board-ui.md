@@ -75,11 +75,16 @@ Body: five `.ccard`s, accent per card. Footer: the existing safety restatement l
 - On open, move focus to the board `<h2>`; on back, restore to the row. Heading hierarchy
   h1(brand) → h2(view) → h3(card).
 
-## 4. Tokens
-Reuse everything in `board.html:8-17`. **Two additions (flagged — see §6):**
-- `--rose:#9A2B2B; --rose-bg:#F7E4E4` — High data-attention only; always paired with label+icon.
-- `.diff` (old/arrow/new) + `.table` styles — composed from existing hairline/spacing/mono
-  tokens; **no arbitrary px values**. Reuse the 4/8/12/16 spacing rhythm already in use.
+## 4. Tokens (as shipped)
+Reuse the `:root` system in `board.html`. **Implemented additions:**
+- `--rose:#B42318; --rose-bg:#FBE9E7` — High data-attention only; always paired with label+icon.
+- `.c-limitations` (`--faint` border) + `.c-flags` (`--slate`) card accents; the `.diff`
+  (old/arrow/new), `.att-badge`, `.flag-cat`, and `.table` styles — composed from existing
+  hairline/spacing/mono tokens, no arbitrary px values (4/8/12/16 rhythm).
+
+**WCAG 2.2 AA contrast (measured + applied to `board.html` + `office.html`):**
+`--faint` #9AA4B2→**#697283**, `--teal` #0E8A6B→**#0C7E61**, `--amber` #B45309→**#A84A07** —
+all body/UI text pairs now ≥4.5:1 (large text / UI components ≥3:1).
 
 ## 5. Build handoff
 Inputs for the build agent: this doc + `board.html`/`office.html` as the visual source of
@@ -87,9 +92,7 @@ truth + the `GET /api/board/{id}` and (new) `GET /api/fhir/activity` shapes. Bui
 either ui-senior-guided vanilla-JS (option A) or `react-senior` (option B) per the stack
 decision. Then browser-verify with Playwright (3-state: list, detail, empty).
 
-## 6. Stop-rule flags (ui-senior) — confirm before building
-- **New semantic color `--rose`** for High attention (the system has teal/amber/slate; this
-  adds a fourth). Justified by a 3-level scale needing a distinct top level; paired with
-  label+icon so it's not color-only. Confirm.
-- **New card style `.c-limitations`** (a 4th `.ccard` accent). Confirm.
+## 6. Stop-rule flags (ui-senior) — RESOLVED (built + verified)
+- **`--rose`** (4th accent, High attention) — shipped; paired with label+icon, not color-alone. ✓
+- **`.c-limitations`** card accent + **`.c-flags`** (the rules-audit card) — shipped. ✓
 No other new design-system surfaces; everything else reuses the current primitives.
