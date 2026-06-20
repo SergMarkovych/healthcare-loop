@@ -287,6 +287,7 @@ async function approveForm(req, data){
       <pre>${esc(draftText)}</pre>
       ${warn}
       <div class="task">↳ <b>Task created:</b> ${esc(task.title)} · owner <b>${esc(task.owner)}</b> · due ${esc(task.due)}</div>
+      ${res.written ? `<div class="task">↪ <b>Written to FHIR</b> (${res.written.mode==='written'?'live':'mock/simulated'}): <span class="ev">${esc(res.written.task_location)}</span> · <span class="ev">${esc(res.written.questionnaire_response_location)}</span></div>` : ``}
     </div>`;
   // Only count it as handled once the physician has completed the clinical fields.
   if(d.complete){

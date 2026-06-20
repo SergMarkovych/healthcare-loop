@@ -73,7 +73,9 @@ def build_questionnaire_response(patient_id: str, questionnaire_id: str,
     """items: [{linkId, text, value}] -> QuestionnaireResponse.item[*].answer[valueString]."""
     return {
         "resourceType": "QuestionnaireResponse",
-        "questionnaire": f"Questionnaire/{questionnaire_id}",
+        # canonical(Questionnaire) per FHIR R4 — an absolute URL, so a FHIR server
+        # does NOT enforce referential integrity against a Questionnaire it doesn't host.
+        "questionnaire": f"http://healthcare-loop.local/Questionnaire/{questionnaire_id}",
         "status": "completed",
         "subject": _ref(patient_id),
         "authored": _now(),

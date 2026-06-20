@@ -51,7 +51,7 @@ def test_build_questionnaire_response_shape():
     })
     assert res["resourceType"] == "QuestionnaireResponse"
     assert res["status"] == "completed"
-    assert res["questionnaire"] == "Questionnaire/sick_note"
+    assert res["questionnaire"] == "http://healthcare-loop.local/Questionnaire/sick_note"
     assert res["subject"] == {"reference": "Patient/p4"}
     assert res["item"][0] == {"linkId": "patient_name", "text": "Patient name",
                               "answer": [{"valueString": "Alex Demo"}]}
