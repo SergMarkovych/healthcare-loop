@@ -124,6 +124,20 @@
   /* limitations: faint, honest, the API's blind spot */
   .ccard.c-limitations{border-color:var(--faint)}
   .ccard.c-limitations h3::before{background:var(--faint)}
+  /* rules flags: the auditable data/workflow layer — leads the board */
+  .ccard.c-flags{border-color:var(--slate)}
+  .ccard.c-flags h3::before{background:var(--slate)}
+
+  /* flag category badge — label text + color, never color alone (reuses .att-badge shape) */
+  .flag-cat{display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+    padding:3px 9px; border-radius:999px; border:1px solid transparent; white-space:nowrap; letter-spacing:-.005em; flex:0 0 auto}
+  .fc-data_change{background:var(--amber-bg); color:var(--amber); border-color:#F0D9B5}
+  .fc-data_availability{background:var(--slate-bg); color:var(--slate); border-color:#CBD8EC}
+  .fc-workflow{background:var(--teal-bg); color:var(--teal-2); border-color:#BFE6D8}
+  .flag-cat.fc-other{background:var(--surface-2); color:var(--muted); border-color:var(--hair)}
+  .flag-foot{font-size:11px; color:var(--faint); margin-top:13px; padding-top:12px; border-top:1px solid var(--hair-2);
+    display:flex; align-items:center; gap:7px; line-height:1.4}
+  .flag-foot svg{color:var(--slate); flex:0 0 auto}
 
   .item{display:flex; gap:12px; align-items:flex-start; padding:9px 0; border-top:1px solid var(--hair-2)}
   .item:first-of-type{border-top:0}
@@ -394,6 +408,29 @@ function renderItem(it){
   return `<div class="item"><div class="txt">${esc(it.text)}${extra}</div>${src}</div>`;
 }
 
+// ---- rules flags: the auditable data/workflow layer (no clinical judgement) ----
+const FLAG_CAT_CLASS = {data_change:"fc-data_change", data_availability:"fc-data_availability", workflow:"fc-workflow"};
+const FLAG_CAT_LABEL = {data_change:"Data change", data_availability:"Data availability", workflow:"Workflow"};
+function flagRow(f){
+  const cat = String(f && f.category || "");
+  const cls = FLAG_CAT_CLASS[cat] || "fc-other";
+  const label = FLAG_CAT_LABEL[cat] || (cat ? cat.replace(/_/g," ") : "Flag");
+  const badge = `<span class="flag-cat ${cls}">${esc(label)}</span>`;
+  const src = f && f.source ? `<span class="src">${esc(f.source)}</span>` : "";
+  return `<div class="item">${badge}<div class="txt">${esc(f && f.message)}</div>${src}</div>`;
+}
+function flagsCard(flags){
+  const list = Array.isArray(flags) ? flags : [];
+  const rows = list.length
+    ? list.map(flagRow).join("")
+    : `<div class="item"><span class="txt" style="color:var(--faint)">No data or workflow flags.</span></div>`;
+  return `<section class="ccard c-flags" aria-labelledby="h-flags">
+    <h3 id="h-flags">Rules flags · data &amp; workflow (auditable)</h3>${rows}
+    <div class="flag-foot">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Clinical interpretation: none · Treatment recommendation: none — data/workflow flags only, no clinical judgement.</div></section>`;
+}
+
 function renderBoard(data){
   const cards = (data.cards||[]).map(c=>{
     const items = (c.items||[]).map(renderItem).join("")
@@ -403,7 +440,7 @@ function renderBoard(data){
       <h3 id="${hid}">${esc(c.title)}</h3>${items}</section>`;
   }).join("");
 
-  $("board").innerHTML = cards + `<div class="restate">
+  $("board").innerHTML = flagsCard(data.flags) + cards + `<div class="restate">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
     Every line above restates a FHIR-API fact and cites its source. No diagnosis, prognosis, or interpretation is generated.</div>`;
 }
