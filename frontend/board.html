@@ -43,6 +43,14 @@
     border-radius:999px; border:1px solid var(--hair); background:var(--surface); color:var(--muted); white-space:nowrap}
   .chip svg{color:var(--teal)}
 
+  /* cross-tool nav */
+  .toolnav{display:flex; align-items:center; gap:4px}
+  .toolnav a{display:inline-flex; align-items:center; font-size:12.5px; font-weight:550; text-decoration:none;
+    color:var(--muted); padding:5px 11px; border-radius:999px; border:1px solid transparent; white-space:nowrap;
+    transition:background .12s, color .12s, border-color .12s}
+  .toolnav a:hover{color:var(--ink); background:var(--surface-2)}
+  .toolnav a[aria-current="page"]{color:var(--teal-2); background:var(--teal-bg); border-color:#BFE6D8; font-weight:600}
+
   main{max-width:1200px; margin:0 auto; padding:24px 24px 72px}
   .panel{background:var(--surface); border:1px solid var(--hair); border-radius:var(--r-lg);
     padding:18px; box-shadow:var(--shadow)}
@@ -139,6 +147,22 @@
     display:flex; align-items:center; gap:7px; line-height:1.4}
   .flag-foot svg{color:var(--slate); flex:0 0 auto}
 
+  /* collapsed audit / sources expander */
+  details.audit, details.sources{margin-top:2px}
+  .ccard details > summary, details.audit > summary{cursor:pointer; list-style:none; font-size:12.5px; font-weight:600;
+    color:var(--muted); padding:4px 0; display:flex; align-items:center; gap:7px; letter-spacing:-.005em}
+  .ccard details > summary::-webkit-details-marker, details.audit > summary::-webkit-details-marker{display:none}
+  .ccard details > summary::before, details.audit > summary::before{content:"›"; color:var(--faint);
+    font-size:15px; line-height:1; transition:transform .12s; flex:0 0 auto}
+  .ccard details[open] > summary::before, details.audit[open] > summary::before{transform:rotate(90deg)}
+  .ccard details > summary:hover, details.audit > summary:hover{color:var(--ink)}
+  .ccard details > summary:focus-visible, details.audit > summary:focus-visible{outline:2px solid var(--focus); outline-offset:2px; border-radius:var(--r-sm)}
+  details.audit > .flag-foot{margin-top:13px}
+
+  /* clickable-row chevron */
+  th.go, td.go{width:18px; padding-right:14px}
+  td.go{text-align:right; color:var(--faint); font-size:15px; line-height:1}
+
   .item{display:flex; gap:12px; align-items:flex-start; padding:9px 0; border-top:1px solid var(--hair-2)}
   .item:first-of-type{border-top:0}
   .item .txt{flex:1; font-size:13.5px; color:var(--ink); min-width:0}
@@ -172,6 +196,10 @@
       <span class="sub">Pre-visit · what changed since last visit · source-backed</span>
     </span>
   </div>
+  <nav class="toolnav" aria-label="Tools">
+    <a href="/board" aria-current="page">Context Board</a>
+    <a href="/office">Office Assistant</a>
+  </nav>
   <span id="modeChip" class="chip">Local-first</span>
   <span class="chip" title="Synthetic data only · no PHI leaves this device">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
@@ -264,6 +292,7 @@ function renderSkeleton(){
       <td class="cell num"><span class="sk w-num"></span></td>
       <td class="cell"><span class="sk w-scan"></span></td>
       <td class="cell"><span class="sk w-badge"></span></td>
+      <td class="cell go" aria-hidden="true"></td>
     </tr>`).join("");
   $("activity").innerHTML = tableShell(rows);
 }
@@ -278,6 +307,7 @@ function tableShell(bodyHtml){
       <th scope="col" class="num">Open workflow</th>
       <th scope="col">Last scan</th>
       <th scope="col" class="att">Data attention</th>
+      <th class="go" aria-hidden="true"></th>
     </tr></thead>
     <tbody>${bodyHtml}</tbody></table></div>`;
 }
@@ -323,6 +353,7 @@ async function loadActivity(){
       ${num(r.open_workflow,"open workflow")}
       <td class="cell scan">${esc(dateOnly(r.last_scan))}</td>
       <td class="cell">${attBadge(r.data_attention)}</td>
+      <td class="cell go" aria-hidden="true">›</td>
     </tr>`;
   }).join("");
 
@@ -425,22 +456,41 @@ function flagsCard(flags){
     ? list.map(flagRow).join("")
     : `<div class="item"><span class="txt" style="color:var(--faint)">No data or workflow flags.</span></div>`;
   return `<section class="ccard c-flags" aria-labelledby="h-flags">
-    <h3 id="h-flags">Rules flags · data &amp; workflow (auditable)</h3>${rows}
-    <div class="flag-foot">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Clinical interpretation: none · Treatment recommendation: none — data/workflow flags only, no clinical judgement.</div></section>`;
+    <details class="audit">
+      <summary id="h-flags">Audit details · rules flags (${list.length})</summary>
+      ${rows}
+      <div class="flag-foot">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Clinical interpretation: none · Treatment recommendation: none — data/workflow flags only, no clinical judgement.</div>
+    </details></section>`;
 }
 
+// clinician-friendlier card titles by card id; fall back to the backend title.
+const CARD_TITLE = {limitations:"Not returned by the chart", source_references:"Sources"};
+function cardTitle(c){ return CARD_TITLE[c.id] || c.title; }
+
 function renderBoard(data){
-  const cards = (data.cards||[]).map(c=>{
+  const cards = (data.cards||[]).filter(c=>{
+    // always render patient_snapshot; skip any other card with no items.
+    if(c.id==="patient_snapshot") return true;
+    return Array.isArray(c.items) && c.items.length > 0;
+  }).map(c=>{
     const items = (c.items||[]).map(renderItem).join("")
       || '<div class="item"><span class="txt" style="color:var(--faint)">Nothing to show.</span></div>';
     const hid = "h-"+esc(c.id);
+    const title = cardTitle(c);
+    // source_references duplicates the inline source chips — render collapsed.
+    if(c.id==="source_references"){
+      const n = (c.items||[]).length;
+      return `<section class="ccard c-${esc(c.id)}" aria-labelledby="${hid}">
+        <details class="sources">
+          <summary id="${hid}">Sources (${n})</summary>${items}</details></section>`;
+    }
     return `<section class="ccard c-${esc(c.id)}" aria-labelledby="${hid}">
-      <h3 id="${hid}">${esc(c.title)}</h3>${items}</section>`;
+      <h3 id="${hid}">${esc(title)}</h3>${items}</section>`;
   }).join("");
 
-  $("board").innerHTML = flagsCard(data.flags) + cards + `<div class="restate">
+  $("board").innerHTML = cards + flagsCard(data.flags) + `<div class="restate">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
     Every line above restates a FHIR-API fact and cites its source. No diagnosis, prognosis, or interpretation is generated.</div>`;
 }

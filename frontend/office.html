@@ -43,6 +43,14 @@
     border-radius:999px; border:1px solid var(--hair); background:var(--surface); color:var(--muted); white-space:nowrap}
   .chip svg{color:var(--teal)}
 
+  /* cross-tool nav */
+  .toolnav{display:flex; align-items:center; gap:4px}
+  .toolnav a{display:inline-flex; align-items:center; font-size:12.5px; font-weight:550; text-decoration:none;
+    color:var(--muted); padding:5px 11px; border-radius:999px; border:1px solid transparent; white-space:nowrap;
+    transition:background .12s, color .12s, border-color .12s}
+  .toolnav a:hover{color:var(--ink); background:var(--surface-2)}
+  .toolnav a[aria-current="page"]{color:var(--teal-2); background:var(--teal-bg); border-color:#BFE6D8; font-weight:600}
+
   main{max-width:1200px; margin:0 auto; padding:24px 24px 72px}
 
   /* metrics strip */
@@ -129,6 +137,10 @@
       <span class="sub">Triage the inbox · auto-prepare paperwork · keep the physician on the clinical part</span>
     </span>
   </div>
+  <nav class="toolnav" aria-label="Tools">
+    <a href="/board">Context Board</a>
+    <a href="/office" aria-current="page">Office Assistant</a>
+  </nav>
   <span id="modeChip" class="chip">Local-first</span>
   <span class="chip" title="Synthetic data only · no PHI leaves this device">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
