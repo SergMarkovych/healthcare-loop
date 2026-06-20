@@ -21,6 +21,7 @@ from backend.office import (
     necessity,
     patient_handout,
     referral_intel,
+    verifier,
 )
 from backend.office.data import DEMOGRAPHICS, REQUESTS
 from backend.synthetic_data import SAMPLES
@@ -84,6 +85,10 @@ def prefill_request(request_id: str) -> dict:
 
     form = forms.prefill_form(form_id, fl)
 
+    # ADR-0005 fitness function 2: deterministic verification gate as a precondition
+    # to MD review. Surfaces the verdict (never blocks); no model call.
+    verification = verifier.verify(verifier.from_form(form_id, form)).model_dump()
+
     # Referral intelligence: if the request title or category suggests a referral,
     # surface ranked specialist options.
     referral_options = []
@@ -94,6 +99,7 @@ def prefill_request(request_id: str) -> dict:
 
     return {"status": "ok", "request": req, **cls, "mode": mode,
             "patient_context": patient_context, "form": form,
+            "verification": verification,
             "referral_options": referral_options}
 
 

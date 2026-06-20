@@ -119,6 +119,13 @@
   details.fold .field{margin:10px 14px}
   details.fold pre{margin:0; padding:12px; font-family:var(--mono); font-size:11.5px; white-space:pre-wrap; color:var(--ink)}
 
+  .verify{border-radius:var(--r-md); padding:11px 14px; margin-bottom:12px; font-size:12.5px; display:flex; gap:9px; align-items:flex-start}
+  .verify svg{flex:0 0 auto; margin-top:1px}
+  .verify.ungrounded{border:1px solid var(--rose); background:var(--rose-bg); color:var(--rose)}
+  .verify.gap{border:1px solid var(--amber); background:var(--amber-bg); color:var(--amber)}
+  .verify b{font-weight:700}
+  .verify .vlist{font-family:var(--mono); font-size:11.5px}
+
   .result{margin-top:14px; border:1px solid var(--amber); background:var(--amber-bg); border-radius:var(--r-md); padding:13px}
   .result .rt{font-weight:600; font-size:13px; color:var(--amber); display:flex; align-items:center; gap:7px}
 
@@ -382,6 +389,15 @@ async function renderReview(){
       : ``;
     return `<div class="field ${fld.needs_physician?'md':'auto'}${fld.drafted?' drafted':''}"><label for="f-${fid}">${esc(fld.label)}</label>${ctl}${prov}${confirm}</div>`;
   };
+  const labelOf=(id)=>{ const m=f.fields.find(x=>x.id===id); return m?m.label:id; };
+  const v=data.verification||{};
+  const ung=Array.isArray(v.ungrounded)?v.ungrounded:[];
+  const gaps=Array.isArray(v.missing_required)?v.missing_required:[];
+  const WARN='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+  // ungrounded = a value present without evidence or a not-invented flag: never show it as trustworthy.
+  const verifyHtml=
+    (ung.length?`<div class="verify ungrounded" role="alert">${WARN}<span><b>Unverified — do not trust as-is:</b> <span class="vlist">${ung.map(id=>esc(labelOf(id))).join(", ")}</span> ${ung.length===1?"has":"have"} a value with no supporting evidence. Confirm against the chart before signing.</span></div>`:"")
+    + (gaps.length?`<div class="verify gap">${WARN}<span><b>Missing data:</b> <span class="vlist">${gaps.map(id=>esc(labelOf(id))).join(", ")}</span> could not be auto-filled from the chart — please complete.</span></div>`:"");
   const opts=Array.isArray(data.referral_options)?data.referral_options:[];
   const riskBadge=(r)=>{ const cls=r==="low"?"badge-green":r==="high"?"badge-red":"badge-amber"; return `<span class="badge ${cls}">${esc(r)}</span>`; };
   const refCard = opts.length>0 ? `<div class="ref-intel-card">
@@ -402,6 +418,7 @@ async function renderReview(){
   $("stage").innerHTML=`<div class="stagepanel">
     ${refCard}
     <h2>${esc(f.title)}</h2>
+    ${verifyHtml}
     <p class="lead">${f.auto_filled} field(s) pre-filled from the chart · ${md.length} need your clinical judgement.</p>
     <div class="counter" id="counter" aria-live="polite"></div>
     <div class="grouplabel">Your input needed — ${md.length}</div>
