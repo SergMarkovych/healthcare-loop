@@ -107,6 +107,8 @@
   .md-hint{font-size:11px; color:var(--amber); font-weight:600}
   .draft-badge{color:var(--teal-2); background:var(--teal-bg); border-color:#BFE6D8}
   .field.drafted{box-shadow:inset 0 2px 0 var(--teal)}
+  .draft-confirm{display:flex; align-items:center; gap:7px; margin-top:8px; font-size:12px; font-weight:600; color:var(--teal-2); cursor:pointer}
+  .draft-confirm input{width:15px; height:15px; accent-color:var(--teal)}
 
   details.fold{margin:12px 0; border:1px solid var(--hair); border-radius:var(--r-md); background:var(--surface-2)}
   details.fold>summary{cursor:pointer; padding:11px 14px; font-size:12.5px; font-weight:600; color:var(--muted); list-style:none}
@@ -199,9 +201,8 @@
     <a href="/office" aria-current="page">Office Assistant</a>
   </nav>
   <div class="provider-toggle" id="providerToggle" aria-label="LLM provider">
-    <button class="ptbtn" data-p="mock" onclick="setProvider('mock')">Mock</button>
-    <button class="ptbtn" data-p="ollama" onclick="setProvider('ollama')">Ollama</button>
-    <button class="ptbtn" data-p="openrouter" onclick="setProvider('openrouter')">OpenRouter</button>
+    <button class="ptbtn" data-p="openrouter" onclick="setProvider('openrouter')">AI model</button>
+    <button class="ptbtn" data-p="mock" onclick="setProvider('mock')">Offline (mock)</button>
   </div>
   <span id="providerStatus" class="pstatus hidden"></span>
   <span id="privacyChip" class="chip" title="Synthetic data only · no PHI leaves this device">
@@ -369,14 +370,17 @@ async function renderReview(){
     const big=["functional_limitations","prognosis","work_capacity","school_capacity"].includes(fld.id);
     const fid=esc(fld.id);
     const ctl=big
-      ? `<textarea id="f-${fid}" data-fid="${fid}" data-md="${fld.needs_physician?1:0}" placeholder="${fld.needs_physician?'Your clinical judgement…':''}">${esc(fld.value)}</textarea>`
-      : `<input id="f-${fid}" type="text" data-fid="${fid}" data-md="${fld.needs_physician?1:0}" value="${esc(fld.value)}" placeholder="${fld.needs_physician?'Confirm from chart…':''}"/>`;
+      ? `<textarea id="f-${fid}" data-fid="${fid}" data-md="${fld.needs_physician?1:0}" data-draft="${fld.drafted?1:0}" placeholder="${fld.needs_physician?'Your clinical judgement…':''}">${esc(fld.value)}</textarea>`
+      : `<input id="f-${fid}" type="text" data-fid="${fid}" data-md="${fld.needs_physician?1:0}" data-draft="${fld.drafted?1:0}" value="${esc(fld.value)}" placeholder="${fld.needs_physician?'Confirm from chart…':''}"/>`;
     const prov=fld.drafted
       ? `<div class="prov"><span class="conf draft-badge">AI draft — verify &amp; sign</span><span class="conf ${fld.confidence==='low'?'low':''}">${esc(fld.confidence)} confidence</span>${fld.evidence?`<span class="ev">from note: ${esc(fld.evidence)}</span>`:``}</div>`
       : fld.needs_physician
       ? `<div class="prov"><span class="md-hint">Requires your clinical judgement</span></div>`
       : `<div class="prov"><span class="conf ${fld.confidence==='low'?'low':''}">${esc(fld.confidence)} confidence</span>${fld.evidence?`<span class="ev">from note: ${esc(fld.evidence)}</span>`:``}</div>`;
-    return `<div class="field ${fld.needs_physician?'md':'auto'}${fld.drafted?' drafted':''}"><label for="f-${fid}">${esc(fld.label)}</label>${ctl}${prov}</div>`;
+    const confirm=fld.drafted
+      ? `<label class="draft-confirm"><input type="checkbox" class="draft-chk" data-cfor="${fid}"/> I've reviewed this AI draft</label>`
+      : ``;
+    return `<div class="field ${fld.needs_physician?'md':'auto'}${fld.drafted?' drafted':''}"><label for="f-${fid}">${esc(fld.label)}</label>${ctl}${prov}${confirm}</div>`;
   };
   const opts=Array.isArray(data.referral_options)?data.referral_options:[];
   const riskBadge=(r)=>{ const cls=r==="low"?"badge-green":r==="high"?"badge-red":"badge-amber"; return `<span class="badge ${cls}">${esc(r)}</span>`; };
@@ -406,7 +410,11 @@ async function renderReview(){
     <div id="formResult"></div>
     <div class="primary-row"><button class="btn lg" id="approveBtn" disabled></button></div>
   </div>`;
-  $("stage").querySelectorAll('[data-md="1"]').forEach(el=>el.addEventListener("input", updateCounter));
+  $("stage").querySelectorAll('[data-md="1"]').forEach(el=>el.addEventListener("input", ()=>{
+    if(el.dataset.draft==="1"){ const chk=draftChk(el.dataset.fid); if(chk) chk.checked=true; }
+    updateCounter();
+  }));
+  $("stage").querySelectorAll('.draft-chk').forEach(el=>el.addEventListener("change", updateCounter));
   $("approveBtn").addEventListener("click", ()=>approveForm(req));
   updateCounter();
   focusHeading();
@@ -418,8 +426,14 @@ function selectSpecialist(name, clinic) {
   event.currentTarget.classList.add('selected');
 }
 function mdEls(){ return Array.from($("stage").querySelectorAll('[data-md="1"]')); }
+function draftChk(fid){ return $("stage").querySelector('.draft-chk[data-cfor="'+fid+'"]'); }
+function mdComplete(el){
+  if(!el.value.trim()) return false;
+  if(el.dataset.draft==="1"){ const chk=draftChk(el.dataset.fid); return !!(chk && chk.checked); }
+  return true;
+}
 function updateCounter(){
-  const els=mdEls(); const filled=els.filter(e=>e.value.trim()).length, total=els.length, allDone=filled>=total;
+  const els=mdEls(); const filled=els.filter(mdComplete).length, total=els.length, allDone=filled>=total;
   const c=$("counter"); c.className="counter"+(allDone?" alldone":""); c.innerHTML=`<b>${filled} of ${total}</b> clinical field${total===1?"":"s"} complete`;
   const btn=$("approveBtn");
   if(allDone){ btn.disabled=false; btn.textContent="Approve & generate →"; }

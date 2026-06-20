@@ -88,3 +88,35 @@ def test_prefill_request_no_model_leaves_field_blank_and_undrafted():
     assert cell["value"] == ""
     assert cell.get("drafted", False) is False
     assert cell["role"] == "physician"
+
+
+def test_partial_draft_only_overlays_returned_fields(monkeypatch):
+    monkeypatch.setattr(field_drafter, "FORCE_MOCK", False)
+    monkeypatch.setattr(field_drafter.llm_client, "call_chat",
+                        lambda *a, **kw: _DRAFT_JSON)
+
+    result = service.prefill_request("req-2")
+    fields = _fields_by_id(result["form"])
+
+    assert fields["functional_limitations"]["drafted"] is True
+    assert fields["functional_limitations"]["value"]
+    assert fields["prognosis"]["value"] == ""
+    assert fields["prognosis"].get("drafted", False) is False
+    assert fields["prognosis"]["needs_physician"] is True
+
+
+def test_approve_treats_drafted_field_as_satisfied(monkeypatch):
+    monkeypatch.setattr(field_drafter, "FORCE_MOCK", False)
+    monkeypatch.setattr(field_drafter.llm_client, "call_chat",
+                        lambda *a, **kw: _DRAFT_JSON)
+
+    res = service.approve_request("req-2", {
+        "onset_date": "2026-01-10",
+        "prognosis": "Good with adherence",
+        "expected_duration": "6 months",
+    })
+
+    assert res["status"] == "ok"
+    draft = res["draft"]
+    assert "Functional limitations" not in draft["outstanding_fields"]
+    assert draft["complete"] is True
