@@ -114,6 +114,15 @@ _FOLLOWUP = {
 _DEFAULT_FOLLOWUP = ("Complete and route the document", "admin", "1 week")
 
 
+def verify_request(request_id: str) -> dict:
+    """Server-derived verification verdict: the gate run on our own prefill output.
+
+    Exposed at POST /api/office/verify. Deriving from the server's prefill (not from
+    caller-supplied fields) is the security property — a caller cannot forge a pass.
+    """
+    return prefill_request(request_id).get("verification", {})
+
+
 def approve_request(request_id: str, completed_fields: dict | None = None) -> dict:
     """Physician approves a prefilled form.
 

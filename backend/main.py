@@ -12,7 +12,7 @@ from typing import Literal
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend import llm
 from backend.board import service as board_service
@@ -22,7 +22,6 @@ from backend.fhir import sources as fhir_sources
 from backend.fhir import writer as fhir_writer
 from backend.office import service as office_service
 from backend.office import summarizer as office_summarizer
-from backend.office import verifier as office_verifier
 from backend.synthetic_data import SAMPLES
 from backend.transcribe import router as transcribe_router
 
@@ -196,7 +195,7 @@ class MetricsRequest(BaseModel):
 
 
 class SummarizeRequest(BaseModel):
-    text: str
+    text: str = Field(max_length=20_000)
 
 
 @app.get("/api/office/requests")
@@ -225,8 +224,10 @@ def office_handout(request_id: str) -> dict:
 
 
 @app.post("/api/office/verify")
-def office_verify(req: office_verifier.VerifyRequest) -> office_verifier.VerifyResult:
-    return office_verifier.verify(req)
+def office_verify(req: PrefillRequest) -> dict:
+    # Server-derived: re-run the gate on our own prefill output so a caller cannot
+    # forge a verdict by supplying its own evidence refs / not-invented flags.
+    return office_service.verify_request(req.request_id)
 
 
 @app.post("/api/office/summarize")

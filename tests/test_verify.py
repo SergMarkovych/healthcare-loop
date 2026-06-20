@@ -107,17 +107,20 @@ def test_verify_empty_judgment_fields_pass_not_missing():
         assert f.name not in result.missing_required
 
 
-def test_verify_endpoint_round_trip_flags_fabrication(client):
-    form = _grounded_form("school_note")
-    fab = next(f for f in form["fields"] if f["id"] == "diagnosis")
-    fab["value"] = "Sensorineural hearing loss"
-    fab["evidence"] = ""
-    fab["needs_physician"] = False
+def test_verify_endpoint_is_server_derived(client):
+    # The endpoint takes a request_id and derives the verdict from the server's own
+    # prefill output. A caller cannot forge a "pass" by supplying its own fields:
+    # there is no field input to forge.
+    from backend.office import service
 
-    req = verifier.from_form("school_note", form)
-    resp = client.post("/api/office/verify", json=req.model_dump())
+    rid = next(r["id"] for r in client.get("/api/office/requests").json()
+               if r.get("has_form"))
+    resp = client.post("/api/office/verify", json={"request_id": rid})
     assert resp.status_code == 200
     payload = resp.json()
 
-    assert payload["status"] == "flag"
-    assert "diagnosis" in payload["ungrounded"]
+    assert payload["status"] in ("pass", "flag")
+    assert isinstance(payload["ungrounded"], list)
+    assert isinstance(payload["missing_required"], list)
+    # identical to the gate computed during prefill -> proves the same server-derived path
+    assert payload == service.prefill_request(rid)["verification"]
