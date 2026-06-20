@@ -87,10 +87,6 @@ FORMS = {
         "fields": ["patient_name", "date_of_birth", "diagnosis",
                    "school_capacity", "expected_duration"],
     },
-    "sick_note": {
-        "title": "Sick note (employer)",
-        "fields": ["patient_name", "date_of_birth", "expected_duration"],
-    },
 }
 
 FIELD_LABELS = {

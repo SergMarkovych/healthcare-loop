@@ -6,13 +6,10 @@
 <title>Digital Office Assistant — Loop</title>
 <style>
   :root{
-    /* cool-tinted neutrals — premium never uses flat grey */
     --bg:#F6F8FB; --surface:#FFFFFF; --surface-2:#F2F5F9;
     --ink:#0E1726; --ink-2:#0A0F1A; --muted:#566173; --faint:#697283;
     --hair:#E4E9F0; --hair-2:#EDF1F6;
-    /* single trust accent */
     --teal:#0C7E61; --teal-2:#0B6E55; --teal-bg:#E4F4EE;
-    /* data-attention only — always paired with a label + icon */
     --amber:#A84A07; --amber-bg:#FBEFDD;
     --rose:#B42318; --rose-bg:#FBE9E7;
     --slate:#3E5C8A; --slate-bg:#E9EEF7;
@@ -25,105 +22,120 @@
   }
   *{box-sizing:border-box} html,body{margin:0}
   body{font-family:var(--sans); color:var(--ink); background:var(--bg);
-    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
-    line-height:1.5; font-size:14px; letter-spacing:-.005em}
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; line-height:1.5; font-size:14px; letter-spacing:-.005em}
 
-  /* header */
   header{position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-    padding:14px 24px; background:rgba(246,248,251,.82); backdrop-filter:blur(10px) saturate(1.4);
-    border-bottom:1px solid var(--hair)}
+    padding:14px 24px; background:rgba(246,248,251,.82); backdrop-filter:blur(10px) saturate(1.4); border-bottom:1px solid var(--hair)}
   .brand{margin-right:auto; display:flex; align-items:center; gap:12px; min-width:0}
   .mark{width:30px; height:30px; border-radius:9px; flex:0 0 auto; display:grid; place-items:center;
-    background:linear-gradient(150deg,var(--teal),var(--teal-2)); color:#fff; font-weight:800; font-size:15px;
-    box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.25)}
+    background:linear-gradient(150deg,var(--teal),var(--teal-2)); color:#fff; font-weight:800; font-size:15px; box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.25)}
   .brand .txt{min-width:0}
   .wordmark{font-size:15.5px; font-weight:680; letter-spacing:-.02em; color:var(--ink-2); line-height:1.2}
   .sub{font-size:12.5px; color:var(--muted); line-height:1.3}
   .chip{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:550; padding:5px 11px;
     border-radius:999px; border:1px solid var(--hair); background:var(--surface); color:var(--muted); white-space:nowrap}
   .chip svg{color:var(--teal)}
-
-  /* cross-tool nav */
   .toolnav{display:flex; align-items:center; gap:4px}
-  .toolnav a{display:inline-flex; align-items:center; font-size:12.5px; font-weight:550; text-decoration:none;
-    color:var(--muted); padding:5px 11px; border-radius:999px; border:1px solid transparent; white-space:nowrap;
-    transition:background .12s, color .12s, border-color .12s}
+  .toolnav a{display:inline-flex; align-items:center; font-size:12.5px; font-weight:550; text-decoration:none; color:var(--muted);
+    padding:5px 11px; border-radius:999px; border:1px solid transparent; white-space:nowrap; transition:background .12s, color .12s, border-color .12s}
   .toolnav a:hover{color:var(--ink); background:var(--surface-2)}
   .toolnav a[aria-current="page"]{color:var(--teal-2); background:var(--teal-bg); border-color:#BFE6D8; font-weight:600}
 
   main{max-width:1200px; margin:0 auto; padding:24px 24px 72px}
+  .wrap{max-width:900px; margin:0 auto}
 
-  /* metrics strip */
-  .metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px}
-  @media(max-width:760px){.metrics{grid-template-columns:repeat(2,1fr)}}
-  .metric{background:var(--surface); border:1px solid var(--hair); border-radius:var(--r-lg); padding:16px 18px; box-shadow:var(--shadow)}
-  .metric .num{font-size:clamp(22px,4vw,30px); font-weight:720; letter-spacing:-.02em; color:var(--ink-2); font-variant-numeric:tabular-nums}
-  .metric .lbl{font-size:12px; color:var(--muted); margin-top:3px}
-  .metric.accent .num{color:var(--teal)}
+  /* step rail */
+  .rail{display:flex; align-items:center; margin:4px 0 6px; overflow-x:auto; padding-bottom:4px}
+  .step{display:flex; align-items:center; gap:8px; flex:0 0 auto}
+  .step .node{width:24px; height:24px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700;
+    background:var(--surface); border:1.5px solid var(--hair); color:var(--faint)}
+  .step.active .node{background:var(--teal); border-color:var(--teal); color:#fff; box-shadow:0 0 0 4px var(--teal-bg)}
+  .step.done .node{background:var(--teal-bg); border-color:var(--teal); color:var(--teal-2)}
+  .step .lbl{font-size:12px; font-weight:600; color:var(--faint); white-space:nowrap}
+  .step.active .lbl{color:var(--ink)}
+  .step.done .lbl{color:var(--teal-2)}
+  .connector{width:30px; height:2px; background:var(--hair); margin:0 8px; flex:0 0 auto}
+  @media(max-width:720px){ .step .lbl{display:none} .connector{width:16px; margin:0 5px} }
+  .caption{font-size:13px; color:var(--muted); margin:2px 0 18px}
 
-  .grid{display:grid; grid-template-columns:1fr 1.05fr; gap:20px; align-items:start}
-  @media(max-width:900px){.grid{grid-template-columns:1fr}}
-  .panel{background:var(--surface); border:1px solid var(--hair); border-radius:var(--r-lg); padding:18px; box-shadow:var(--shadow)}
-  .panel h2{margin:0 0 4px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--faint)}
-  .panel .hint{font-size:12.5px; color:var(--muted); margin:0 0 14px}
+  .stagepanel{background:var(--surface); border:1px solid var(--hair); border-radius:var(--r-lg); padding:20px 22px; box-shadow:var(--shadow); margin-bottom:16px}
+  .stagepanel h2{margin:0 0 4px; font-size:16px; font-weight:680; letter-spacing:-.01em}
+  .stagepanel .lead{font-size:13px; color:var(--muted); margin:0 0 16px}
+  .grouplabel{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); margin:18px 0 9px}
 
-  /* request cards */
-  .req{border:1px solid var(--hair); border-left:3px solid var(--hair); border-radius:var(--r-md);
-    padding:12px 14px; margin-bottom:10px; background:var(--surface); box-shadow:var(--shadow);
-    transition:opacity .15s, border-color .12s, box-shadow .12s}
-  .req:hover{border-color:#CBD5E3; box-shadow:var(--shadow-lg)}
-  .req.done{opacity:.55}
+  .primary-row{margin-top:18px}
+  .btn{appearance:none; border:1px solid var(--teal-2); background:linear-gradient(180deg,var(--teal),var(--teal-2)); color:#fff;
+    font-size:13px; font-weight:600; padding:9px 15px; border-radius:var(--r-sm); box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.2); transition:filter .12s, transform .04s; cursor:pointer; font-family:inherit}
+  .btn:hover{filter:brightness(1.06)} .btn:active{transform:translateY(.5px)}
+  .btn[disabled]{opacity:.5; cursor:default; filter:none}
+  .btn.lg{font-size:14px; padding:12px 18px; width:100%; display:flex; justify-content:center}
+
+  .req{border:1px solid var(--hair); border-left:3px solid var(--hair); border-radius:var(--r-md); padding:12px 14px; margin-bottom:10px; background:var(--surface); box-shadow:var(--shadow)}
   .req.r-eliminate,.req.r-automate{border-left-color:var(--teal)}
   .req.r-physician_review{border-left-color:var(--amber)}
   .req.r-delegate{border-left-color:var(--slate)}
+  .req.resolved{opacity:.9}
   .req-top{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
-  .req-title{font-weight:620; font-size:14.5px; letter-spacing:-.01em}
+  .req-title{font-weight:620; font-size:14px; letter-spacing:-.01em}
   .route{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; letter-spacing:.02em}
   .route::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor; flex:0 0 auto}
   .route.eliminate,.route.automate{color:var(--teal); background:var(--teal-bg)}
-  .route.physician_review{color:var(--amber); background:var(--amber-bg); border:1px solid rgba(180,83,9,.25)}
+  .route.physician_review{color:var(--amber); background:var(--amber-bg); border:1px solid rgba(168,74,7,.25)}
   .route.delegate{color:var(--slate); background:var(--slate-bg)}
   .req-reason{font-size:12.5px; color:var(--muted); margin:7px 0 0}
   .req-meta{display:flex; align-items:center; gap:14px; margin-top:9px; font-size:12px; color:var(--faint); flex-wrap:wrap}
   .req-meta b{color:var(--ink); font-weight:600}
-  .req-actions{margin-top:11px; display:flex; gap:8px; align-items:center}
-  .done-tag{font-size:12px; color:var(--teal); font-weight:600}
+  .resolved-line{margin-top:9px; font-size:12.5px; color:var(--teal-2); display:flex; gap:7px; align-items:flex-start}
+  .resolved-line svg{flex:0 0 auto; margin-top:1px}
 
-  button{font-family:inherit; cursor:pointer}
-  .btn{appearance:none; border:1px solid var(--teal-2); background:linear-gradient(180deg,var(--teal),var(--teal-2));
-    color:#fff; font-size:13px; font-weight:600; padding:9px 15px; border-radius:var(--r-sm);
-    box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.2); transition:filter .12s, transform .04s}
-  .btn:hover{filter:brightness(1.06)} .btn:active{transform:translateY(.5px)}
-  .btn.ghost{background:var(--surface); color:var(--ink); border-color:var(--hair); box-shadow:none}
-  .btn.ghost:hover{background:var(--surface-2); border-color:#D4DBE5}
-  .btn[disabled]{opacity:.5; cursor:default; filter:none}
+  .clearedrow{display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--teal-bg); border:1px solid #BFE6D8; border-radius:var(--r-md); font-size:12.5px; font-weight:600; color:var(--teal-2); margin-bottom:16px}
 
-  /* form review */
-  .empty{border:1px dashed var(--hair); border-radius:var(--r-md); padding:34px 22px; text-align:center; color:var(--muted); font-size:13px}
-  .empty .big{display:block; font-size:14.5px; font-weight:650; color:var(--ink); margin-bottom:5px; letter-spacing:-.01em}
-  .form-title{font-weight:660; font-size:15px; margin-bottom:3px; letter-spacing:-.01em}
-  .form-sub{font-size:12.5px; color:var(--muted); margin-bottom:14px}
+  .counter{font-size:12.5px; color:var(--muted); margin-bottom:12px}
+  .counter b{color:var(--amber)} .counter.alldone b{color:var(--teal)}
+
   .field{border:1px solid var(--hair); border-radius:var(--r-md); padding:11px 13px; margin-bottom:10px; background:var(--surface)}
   .field.md{border-left:3px solid var(--amber); background:var(--amber-bg)}
   .field.auto{border-left:3px solid var(--teal)}
   .field label{display:block; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); margin-bottom:6px}
-  .field input,.field textarea{width:100%; font-family:inherit; font-size:13.5px; color:var(--ink); border:1px solid var(--hair);
-    border-radius:var(--r-sm); padding:8px 10px; background:var(--surface)}
+  .field input,.field textarea{width:100%; font-family:inherit; font-size:13.5px; color:var(--ink); border:1px solid var(--hair); border-radius:var(--r-sm); padding:8px 10px; background:var(--surface)}
   .field input:focus,.field textarea:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-bg)}
-  .field textarea{resize:vertical; min-height:40px; line-height:1.4}
+  .field textarea{resize:vertical; min-height:42px; line-height:1.4}
   .field .prov{display:flex; align-items:center; gap:8px; margin-top:8px; font-size:11px; color:var(--muted); flex-wrap:wrap}
   .conf{font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:999px; border:1px solid var(--hair); color:var(--muted); background:var(--surface-2)}
-  .conf.low{color:var(--amber); background:var(--amber-bg); border-color:rgba(180,83,9,.25)}
-  .ev{font-family:var(--mono); font-size:10.5px; color:var(--muted); background:var(--surface-2);
-    border:1px solid var(--hair); border-radius:6px; padding:3px 8px; letter-spacing:-.01em}
+  .conf.low{color:var(--amber); background:var(--amber-bg); border-color:rgba(168,74,7,.25)}
+  .ev{font-family:var(--mono); font-size:10.5px; color:var(--muted); background:var(--surface-2); border:1px solid var(--hair); border-radius:6px; padding:3px 8px; letter-spacing:-.01em}
   .md-hint{font-size:11px; color:var(--amber); font-weight:600}
 
-  .result{margin-top:14px; border:1px solid var(--teal); background:var(--teal-bg); border-radius:var(--r-md); padding:14px; box-shadow:var(--shadow)}
-  .result .rt{font-weight:650; font-size:13.5px; color:var(--teal-2); margin-bottom:8px; display:flex; align-items:center; gap:7px}
-  .result pre{margin:0; font-family:var(--mono); font-size:11.5px; white-space:pre-wrap; color:var(--ink); background:var(--surface); border:1px solid var(--hair); border-radius:var(--r-sm); padding:12px}
-  .task{margin-top:10px; font-size:12.5px; color:var(--ink)}
-  .task b{color:var(--teal)}
+  details.fold{margin:12px 0; border:1px solid var(--hair); border-radius:var(--r-md); background:var(--surface-2)}
+  details.fold>summary{cursor:pointer; padding:11px 14px; font-size:12.5px; font-weight:600; color:var(--muted); list-style:none}
+  details.fold>summary::-webkit-details-marker{display:none}
+  details.fold>summary::before{content:"▸ "; color:var(--faint)}
+  details.fold[open]>summary::before{content:"▾ "}
+  details.fold[open]>summary{border-bottom:1px solid var(--hair)}
+  details.fold .field{margin:10px 14px}
+  details.fold pre{margin:0; padding:12px; font-family:var(--mono); font-size:11.5px; white-space:pre-wrap; color:var(--ink)}
 
+  .result{margin-top:14px; border:1px solid var(--amber); background:var(--amber-bg); border-radius:var(--r-md); padding:13px}
+  .result .rt{font-weight:600; font-size:13px; color:var(--amber); display:flex; align-items:center; gap:7px}
+
+  .metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:6px 0 18px}
+  @media(max-width:760px){.metrics{grid-template-columns:repeat(2,1fr)}}
+  .metric{background:var(--surface-2); border:1px solid var(--hair); border-radius:var(--r-md); padding:14px 16px}
+  .metric .num{font-size:clamp(22px,4vw,30px); font-weight:720; letter-spacing:-.02em; color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .metric.accent .num{color:var(--teal)}
+  .metric .lbl{font-size:12px; color:var(--muted); margin-top:3px}
+
+  .payoff-head{font-size:21px; font-weight:720; letter-spacing:-.02em; color:var(--ink-2); margin-bottom:4px}
+  .ledger{margin:4px 0 16px}
+  .led-item{display:flex; gap:11px; padding:12px 0; border-top:1px solid var(--hair-2); align-items:flex-start}
+  .led-item:first-child{border-top:0}
+  .led-ico{width:28px; height:28px; border-radius:8px; display:grid; place-items:center; flex:0 0 auto; background:var(--teal-bg); color:var(--teal-2); font-size:14px}
+  .led-body{flex:1; min-width:0}
+  .led-title{font-weight:600; font-size:13.5px}
+  .led-sub{font-size:12px; color:var(--muted); margin-top:2px}
+  .payoff-foot{font-size:12.5px; color:var(--muted); margin-top:14px; padding-top:14px; border-top:1px solid var(--hair-2)}
+
+  .empty{border:1px dashed var(--hair); border-radius:var(--r-md); padding:30px 22px; text-align:center; color:var(--muted); font-size:13px}
   :focus-visible{outline:2px solid var(--focus); outline-offset:2px; border-radius:3px}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -134,7 +146,7 @@
     <span class="mark">L</span>
     <span class="txt">
       <span class="wordmark">Digital Office Assistant</span>
-      <span class="sub">Triage the inbox · auto-prepare paperwork · keep the physician on the clinical part</span>
+      <span class="sub">A guided pass through your paperwork — most of it never reaches you</span>
     </span>
   </div>
   <nav class="toolnav" aria-label="Tools">
@@ -148,186 +160,224 @@
   </span>
 </header>
 
-<main>
-  <div class="metrics">
-    <div class="metric accent"><div class="num" id="mMin">0</div><div class="lbl">minutes saved this session</div></div>
-    <div class="metric"><div class="num" id="mTouch">0</div><div class="lbl">physician touchpoints avoided</div></div>
-    <div class="metric"><div class="num" id="mHours">0</div><div class="lbl">projected hrs/yr per physician</div></div>
-    <div class="metric"><div class="num" id="mFte">0</div><div class="lbl">projected FTE per 100 physicians</div></div>
-  </div>
-
-  <div class="grid">
-    <section class="panel">
-      <h2>Incoming requests</h2>
-      <p class="hint">The necessity gate routes each item first — only what truly needs a physician reaches you.</p>
-      <div id="queue"></div>
-    </section>
-
-    <section class="panel">
-      <h2>Form review</h2>
-      <p class="hint">Chart-derived fields are pre-filled with evidence. Clinical-judgement fields are left for you — never invented.</p>
-      <div id="review">
-        <div class="empty"><span class="big">Nothing to review yet</span>
-          Pick a <em>Physician review</em> request and prepare its form. Everything else is handled without you.</div>
-      </div>
-    </section>
-  </div>
-</main>
+<main><div class="wrap">
+  <div class="rail" id="rail"></div>
+  <div class="caption" id="caption"></div>
+  <div id="stage"></div>
+</div></main>
 
 <script>
 "use strict";
-const $ = (id)=>document.getElementById(id);
-const esc = (s)=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const $=(id)=>document.getElementById(id);
+const esc=(s)=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+const CHECK='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>';
 
-let QUEUE = [];
-const processed = {};   // id -> {category, route}
+let QUEUE=[], AUTO=[], PHYS=[], STEP=1, CURSOR=0;
+const processed={};      // id -> {category, route}
+const artifacts=[];      // ledger entries
+let currentReq=null;
+
+const STEPS=[["Triage"],["Your desk"],["Review"],["Approve"],["Done"]];
+const CAPTIONS={
+  1:"The necessity gate sorted your inbox. Most of it never needed you.",
+  2:"These need your clinical judgement. Everything safe is already filled in.",
+  3:"Add your clinical judgement — the chart-derived fields are already done.",
+  4:"This is the part only a physician can sign.",
+  5:"Here's what the assistant produced — and what it kept off your desk."
+};
+const ROUTE_LABEL={eliminate:"Eliminate",delegate:"Delegate",automate:"Automate",physician_review:"Physician review"};
 
 (async function init(){
-  try{ const h = await (await fetch("/api/health")).json();
-       $("modeChip").textContent = h.force_mock ? "Mock mode" : "Model: " + h.model; }catch(e){}
-  try{ QUEUE = await (await fetch("/api/office/requests")).json(); }catch(e){ QUEUE=[]; }
-  renderQueue();
+  try{ const h=await (await fetch("/api/health")).json(); $("modeChip").textContent=h.force_mock?"Mock mode":"Model: "+h.model; }catch(e){}
+  try{ QUEUE=await (await fetch("/api/office/requests")).json(); }catch(e){ QUEUE=[]; }
+  AUTO=QUEUE.filter(r=>r.route!=="physician_review");
+  PHYS=QUEUE.filter(r=>r.route==="physician_review");
+  go(1);
 })();
 
-const ROUTE_LABEL = {eliminate:"Eliminate", delegate:"Delegate", automate:"Automate", physician_review:"Physician review"};
-const ACTION_LABEL = {
-  eliminate:"Send patient attestation",
-  delegate:(w)=>"Route to "+w,
-  automate:"Generate for signature",
-  physician_review:"Prepare form",
-};
-
-function renderQueue(){
-  const root = $("queue");
-  root.innerHTML = QUEUE.map(req=>{
-    const done = !!processed[req.id];
-    const m = req.metrics;
-    const actLabel = req.route==="delegate" ? ACTION_LABEL.delegate(req.who) : ACTION_LABEL[req.route];
-    const actions = done
-      ? `<span class="done-tag">✓ Handled${req.route!=="physician_review"?" · auto":""}</span>`
-      : `<button class="btn${req.route==="physician_review"?"":" ghost"}" data-act="${req.id}">${esc(actLabel)}</button>`;
-    return `<div class="req r-${req.route} ${done?'done':''}" data-id="${req.id}">
-      <div class="req-top"><span class="req-title">${esc(req.title)}</span>
-        <span class="route ${req.route}">${ROUTE_LABEL[req.route]}</span></div>
-      <p class="req-reason">${esc(req.reason)}</p>
-      <div class="req-meta"><span>Handled by <b>${esc(req.who)}</b></span>
-        <span>Saves <b>${m.saved_minutes} min</b></span>
-        ${m.touchpoint_avoided?`<span><b>1</b> physician touch avoided</span>`:``}</div>
-      <div class="req-actions">${actions}</div>
-    </div>`;
+function renderRail(){
+  const sub=(STEP===3||STEP===4)&&PHYS.length>1?` · ${CURSOR+1} of ${PHYS.length}`:"";
+  $("rail").innerHTML=STEPS.map((s,i)=>{
+    const n=i+1, cls=n<STEP?"done":(n===STEP?"active":"");
+    return `<div class="step ${cls}"><span class="node">${n<STEP?"✓":n}</span><span class="lbl">${esc(s[0])}${n===STEP?sub:""}</span></div>`
+      + (i<STEPS.length-1?`<span class="connector"></span>`:"");
   }).join("");
-  root.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click", ()=>onAction(b.dataset.act)));
+  $("caption").textContent=CAPTIONS[STEP]||"";
+}
+function go(step){ STEP=step; renderRail();
+  if(step===1) renderTriage(); else if(step===2) renderDesk(); else if(step===3) renderReview(); else if(step===5) renderPayoff();
+}
+function routePill(r,txt){ return `<span class="route ${(r==="eliminate"||r==="automate")?r:r}">${esc(txt||ROUTE_LABEL[r])}</span>`; }
+function reqCard(req, tail){
+  const m=req.metrics;
+  return `<div class="req r-${req.route}" data-id="${esc(req.id)}">
+    <div class="req-top"><span class="req-title">${esc(req.title)}</span> ${routePill(req.route)}</div>
+    <p class="req-reason">${esc(req.reason)}</p>
+    <div class="req-meta"><span>Handled by <b>${esc(req.who)}</b></span><span>Saves <b>${m.saved_minutes} min</b></span></div>
+    ${tail||""}
+  </div>`;
 }
 
-function onAction(id){
-  const req = QUEUE.find(r=>r.id===id);
-  if(!req) return;
-  if(req.route==="physician_review") return prepareForm(req);
-  // non-physician routes resolve immediately
-  markDone(req);
-  renderQueue();
-  showHandled(req);
+// STEP 1
+function renderTriage(){
+  $("stage").innerHTML=`<div class="stagepanel">
+    <h2>Triage the inbox</h2>
+    <p class="lead">${QUEUE.length} requests came in. The necessity gate already decided which ones need a physician.</p>
+    <div class="grouplabel">Handled without you — ${AUTO.length}</div>
+    <div id="autoGroup">${AUTO.map(r=>reqCard(r)).join("")}</div>
+    <div class="grouplabel">Needs your clinical judgement — ${PHYS.length}</div>
+    <div id="physGroup">${PHYS.map(r=>reqCard(r)).join("")}</div>
+    <div class="primary-row"><button class="btn lg" id="clearBtn">Clear the ${AUTO.length} automatic item${AUTO.length===1?"":"s"} →</button></div>
+  </div>`;
+  $("clearBtn").addEventListener("click", clearAutomatic);
 }
-
-async function prepareForm(req){
-  $("review").innerHTML = `<div class="empty">Preparing ${esc(req.title)}…</div>`;
-  let data;
-  try{ data = await (await fetch("/api/office/prefill",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({request_id:req.id})})).json(); }
-  catch(e){ $("review").innerHTML = `<div class="empty">Couldn't reach the backend.</div>`; return; }
-  if(data.status!=="ok"){ $("review").innerHTML = `<div class="empty">${esc(data.message||"No form for this request.")}</div>`; return; }
-  renderForm(req, data);
+function autoBody(req){
+  if(req.route==="eliminate") return "Patient attestation issued — no physician certification required.";
+  if(req.route==="automate") return `${req.title} generated and queued for signature.`;
+  return `Routed to ${req.who}.`;
 }
-
-function renderForm(req, data){
-  const f = data.form;
-  const fields = f.fields.map(fld=>{
-    const isMd = fld.needs_physician;
-    const big = ["functional_limitations","prognosis","work_capacity","school_capacity"].includes(fld.id);
-    const control = big
-      ? `<textarea data-fid="${fld.id}" placeholder="${isMd?'Your clinical judgement…':''}">${esc(fld.value)}</textarea>`
-      : `<input type="text" data-fid="${fld.id}" value="${esc(fld.value)}" placeholder="${isMd?'Confirm from chart…':''}"/>`;
-    const prov = isMd
-      ? `<div class="prov"><span class="md-hint">Requires your clinical judgement</span></div>`
-      : `<div class="prov"><span class="conf ${fld.confidence==='low'?'low':''}">${esc(fld.confidence)} confidence</span>
-         ${fld.evidence?`<span class="ev">from note: ${esc(fld.evidence)}</span>`:``}</div>`;
-    return `<div class="field ${isMd?'md':'auto'}"><label>${esc(fld.label)}</label>${control}${prov}</div>`;
-  }).join("");
-
-  $("review").innerHTML = `
-    <div class="form-title">${esc(f.title)}</div>
-    <div class="form-sub">${f.auto_filled} field(s) pre-filled from the chart · ${f.physician_fields} for your review
-      · drafted by ${data.mode==='local-model'?'local model':'mock'}</div>
-    ${fields}
-    <div class="req-actions"><button class="btn" id="approveBtn">Approve &amp; generate draft + task</button></div>
-    <div id="formResult"></div>`;
-  $("approveBtn").addEventListener("click", ()=>approveForm(req, data));
-}
-
-async function approveForm(req, data){
-  const completed = {};
-  $("review").querySelectorAll("[data-fid]").forEach(el=>{ if(el.value.trim()) completed[el.dataset.fid]=el.value; });
-  let res;
-  try{ res = await (await fetch("/api/office/approve",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({request_id:req.id, completed_fields:completed})})).json(); }
-  catch(e){ $("formResult").innerHTML = `<div class="empty">Couldn't reach the backend.</div>`; return; }
-  if(res.status!=="ok"){ $("formResult").innerHTML = `<div class="empty">${esc(res.message||"Could not generate draft.")}</div>`; return; }
-
-  const d = res.draft, task = res.follow_up_task;
-  const lines = d.fields.map(f=>`${f.label}: ${f.value||"—"}`);
-  const draftText = `FORM — ${d.title}\n${"-".repeat(40)}\n${lines.join("\n")}`;
-  const head = d.complete ? "Draft generated — ready for your signature"
-                          : "Draft saved — pending your clinical input";
-  const warn = d.complete ? "" :
-    `<div class="task" style="color:var(--amber)"><b>⚠ Incomplete</b> — clinical field(s) still required: ${esc(d.outstanding_fields.join(", "))}</div>`;
-  $("formResult").innerHTML = `
-    <div class="result">
-      <div class="rt"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-        ${head}</div>
-      <pre>${esc(draftText)}</pre>
-      ${warn}
-      <div class="task">↳ <b>Task created:</b> ${esc(task.title)} · owner <b>${esc(task.owner)}</b> · due ${esc(task.due)}</div>
-      ${res.written ? `<div class="task">↪ <b>Written to FHIR</b> (${res.written.mode==='written'?'live':'mock/simulated'}): <span class="ev">${esc(res.written.task_location)}</span> · <span class="ev">${esc(res.written.questionnaire_response_location)}</span></div>` : ``}
-    </div>`;
-  // Only count it as handled once the physician has completed the clinical fields.
-  if(d.complete){
-    markDone(req);
-    renderQueue();
-    $("approveBtn").disabled = true; $("approveBtn").textContent = "Approved ✓";
+function autoPill(req){ return req.route==="eliminate"?"✓ Issued":req.route==="automate"?"✓ Generated":"✓ Routed"; }
+async function clearAutomatic(){
+  const btn=$("clearBtn"); btn.disabled=true; btn.textContent="Clearing…";
+  for(const req of AUTO){
+    processed[req.id]={category:req.category,route:req.route};
+    artifacts.push({kind:"auto", title:`${req.title}`, sub:autoBody(req)});
+    const card=$("autoGroup").querySelector(`.req[data-id="${CSS.escape(req.id)}"]`);
+    if(card){
+      card.classList.add("resolved");
+      const pill=card.querySelector(".route"); if(pill) pill.outerHTML=`<span class="route eliminate">${esc(autoPill(req))}</span>`;
+      const meta=card.querySelector(".req-meta");
+      if(meta) meta.insertAdjacentHTML("afterend", `<div class="resolved-line">${CHECK}${esc(autoBody(req))}</div>`);
+    }
+    await sleep(260);
   }
+  btn.disabled=false; btn.textContent=(PHYS.length?"Continue →":"See what you saved →");
+  btn.replaceWith(btn.cloneNode(true)); // drop old listener
+  $("clearBtn").addEventListener("click", ()=>go(PHYS.length?2:5));
 }
 
-function showHandled(req){
-  let body = "";
-  if(req.route==="eliminate")
-    body = `Patient attestation issued — no physician certification required.`;
-  else if(req.route==="automate")
-    body = `${req.title} generated and queued for signature.`;
-  else
-    body = `Routed to ${req.who}.`;
-  $("review").innerHTML = `<div class="result"><div class="rt">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-    Handled without you — ${ROUTE_LABEL[req.route].toLowerCase()}</div>
-    <pre>${esc(body)}</pre>
-    <div class="task">↳ <b>${req.metrics.saved_minutes} minutes</b> kept off the physician's plate.</div></div>`;
+// STEP 2
+function renderDesk(){
+  if(PHYS.length===0) return go(5);
+  const autoMin=AUTO.reduce((a,r)=>a+r.metrics.saved_minutes,0);
+  $("stage").innerHTML=`<div class="stagepanel">
+    <div class="clearedrow">${CHECK}${AUTO.length} item${AUTO.length===1?"":"s"} handled automatically — ${autoMin} min saved</div>
+    <h2>${PHYS.length} form${PHYS.length===1?"":"s"} need your clinical input</h2>
+    <p class="lead">Everything safe is already filled in from the chart. You only add the clinical judgement.</p>
+    <div>${PHYS.map(r=>reqCard(r, processed[r.id]
+        ? `<div class="resolved-line">${CHECK}Approved — draft + task created</div>`
+        : `<div class="req-meta"><span>${esc(r.form_title||"Form")}</span></div>`)).join("")}</div>
+    <div class="primary-row"><button class="btn lg" id="startBtn"></button></div>
+  </div>`;
+  const next=PHYS.findIndex(r=>!processed[r.id]);
+  const btn=$("startBtn");
+  if(next<0){ btn.textContent="See what you saved →"; btn.addEventListener("click", ()=>go(5)); }
+  else { CURSOR=next; btn.textContent=`${next>0||Object.keys(processed).some(id=>PHYS.find(p=>p.id===id))?"Continue":"Start"} with ${PHYS[next].title} →`; btn.addEventListener("click", ()=>go(3)); }
 }
 
-function markDone(req){
-  processed[req.id] = {category:req.category, route:req.route};
-  updateMetrics();
+// STEP 3 + 4
+async function renderReview(){
+  const req=PHYS[CURSOR]; currentReq=req;
+  $("stage").innerHTML=`<div class="stagepanel"><div class="empty">Preparing ${esc(req.title)}…</div></div>`;
+  let data;
+  try{ data=await (await fetch("/api/office/prefill",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({request_id:req.id})})).json(); }
+  catch(e){ $("stage").innerHTML=`<div class="stagepanel"><div class="empty">Couldn't reach the backend.</div></div>`; return; }
+  if(data.status!=="ok"){ $("stage").innerHTML=`<div class="stagepanel"><div class="empty">${esc(data.message||"No form for this request.")}</div></div>`; return; }
+  const f=data.form;
+  const md=f.fields.filter(x=>x.needs_physician), auto=f.fields.filter(x=>!x.needs_physician);
+  const fieldHtml=(fld)=>{
+    const big=["functional_limitations","prognosis","work_capacity","school_capacity"].includes(fld.id);
+    const ctl=big
+      ? `<textarea data-fid="${fld.id}" data-md="${fld.needs_physician?1:0}" placeholder="${fld.needs_physician?'Your clinical judgement…':''}">${esc(fld.value)}</textarea>`
+      : `<input type="text" data-fid="${fld.id}" data-md="${fld.needs_physician?1:0}" value="${esc(fld.value)}" placeholder="${fld.needs_physician?'Confirm from chart…':''}"/>`;
+    const prov=fld.needs_physician
+      ? `<div class="prov"><span class="md-hint">Requires your clinical judgement</span></div>`
+      : `<div class="prov"><span class="conf ${fld.confidence==='low'?'low':''}">${esc(fld.confidence)} confidence</span>${fld.evidence?`<span class="ev">from note: ${esc(fld.evidence)}</span>`:``}</div>`;
+    return `<div class="field ${fld.needs_physician?'md':'auto'}"><label>${esc(fld.label)}</label>${ctl}${prov}</div>`;
+  };
+  $("stage").innerHTML=`<div class="stagepanel">
+    <h2>${esc(f.title)}</h2>
+    <p class="lead">${f.auto_filled} field(s) pre-filled from the chart · ${md.length} need your clinical judgement.</p>
+    <div class="counter" id="counter"></div>
+    <div class="grouplabel">Your input needed — ${md.length}</div>
+    ${md.map(fieldHtml).join("")}
+    <details class="fold"><summary>Pre-filled from the chart — ${auto.length} (expand to verify)</summary>${auto.map(fieldHtml).join("")}</details>
+    <div id="formResult"></div>
+    <div class="primary-row"><button class="btn lg" id="approveBtn" disabled></button></div>
+  </div>`;
+  $("stage").querySelectorAll('[data-md="1"]').forEach(el=>el.addEventListener("input", updateCounter));
+  $("approveBtn").addEventListener("click", ()=>approveForm(req));
+  updateCounter();
+}
+function mdEls(){ return Array.from($("stage").querySelectorAll('[data-md="1"]')); }
+function updateCounter(){
+  const els=mdEls(); const filled=els.filter(e=>e.value.trim()).length, total=els.length, allDone=filled>=total;
+  const c=$("counter"); c.className="counter"+(allDone?" alldone":""); c.innerHTML=`<b>${filled} of ${total}</b> clinical field${total===1?"":"s"} complete`;
+  const btn=$("approveBtn");
+  if(allDone){ btn.disabled=false; btn.textContent="Approve & generate →"; }
+  else { btn.disabled=true; btn.textContent=`Complete ${total-filled} more field${(total-filled)===1?"":"s"} to approve`; }
+}
+async function approveForm(req){
+  STEP=4; renderRail();
+  const completed={}; $("stage").querySelectorAll("[data-fid]").forEach(el=>{ if(el.value.trim()) completed[el.dataset.fid]=el.value; });
+  let res;
+  try{ res=await (await fetch("/api/office/approve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({request_id:req.id, completed_fields:completed})})).json(); }
+  catch(e){ $("formResult").innerHTML=`<div class="empty">Couldn't reach the backend.</div>`; STEP=3; renderRail(); return; }
+  if(res.status!=="ok"){ $("formResult").innerHTML=`<div class="empty">${esc(res.message||"Could not generate draft.")}</div>`; STEP=3; renderRail(); return; }
+  const d=res.draft;
+  if(!d.complete){
+    STEP=3; renderRail();
+    $("formResult").innerHTML=`<div class="result"><div class="rt"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Can't finish yet — ${esc((d.outstanding_fields||[]).join(", "))} still needs your clinical judgement. We never fill this for you.</div></div>`;
+    const first=mdEls().find(e=>!e.value.trim()); if(first){ first.focus(); first.scrollIntoView({behavior:"smooth",block:"center"}); }
+    return;
+  }
+  const task=res.follow_up_task; const lines=d.fields.map(x=>`${x.label}: ${x.value||"—"}`);
+  artifacts.push({kind:"form", title:`${d.title} — draft ready for signature`,
+    draft:`FORM — ${d.title}\n${"-".repeat(40)}\n${lines.join("\n")}`,
+    task:`${task.title} · owner ${task.owner} · due ${task.due}`, written:res.written||null});
+  processed[req.id]={category:req.category, route:req.route};
+  const remaining=PHYS.filter(r=>!processed[r.id]);
+  if(remaining.length){ go(2); } else { go(5); }
 }
 
-async function updateMetrics(){
-  const items = Object.values(processed);
-  let min=0, touch=0;
-  for(const id in processed){ const r=QUEUE.find(q=>q.id===id); if(r){min+=r.metrics.saved_minutes; touch+=r.metrics.touchpoint_avoided;} }
-  $("mMin").textContent = min; $("mTouch").textContent = touch;
-  try{
-    const proj = await (await fetch("/api/office/metrics",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({processed:items})})).json();
-    $("mHours").textContent = proj.projected_annual_hours_per_physician ?? 0;
-    $("mFte").textContent = proj.projected_fte_per_100_physicians ?? 0;
-  }catch(e){}
+// STEP 5
+async function renderPayoff(){
+  const cleared=Object.keys(processed).length, total=QUEUE.length;
+  const ledger=artifacts.map(a=>{
+    if(a.kind==="form"){
+      return `<div class="led-item"><div class="led-ico">📄</div><div class="led-body">
+        <div class="led-title">${esc(a.title)}</div>
+        <div class="led-sub">↳ Task created: ${esc(a.task)}</div>
+        ${a.written?`<div class="led-sub">↪ Written to FHIR (${a.written.mode==='written'?'live':'mock'}): <span class="ev">${esc(a.written.task_location)}</span> <span class="ev">${esc(a.written.questionnaire_response_location)}</span></div>`:""}
+        <details class="fold" style="margin-top:8px"><summary>View draft</summary><pre>${esc(a.draft)}</pre></details>
+      </div></div>`;
+    }
+    return `<div class="led-item"><div class="led-ico" style="background:var(--surface-2);color:var(--teal)">✓</div><div class="led-body"><div class="led-title">${esc(a.title)}</div><div class="led-sub">${esc(a.sub)}</div></div></div>`;
+  }).join("");
+  $("stage").innerHTML=`<div class="stagepanel">
+    <div class="payoff-head">You cleared ${cleared} of ${total} requests.</div>
+    <p class="lead">Here's what the assistant produced — and what it kept off your desk.</p>
+    <div class="metrics">
+      <div class="metric accent"><div class="num" id="mMin">0</div><div class="lbl">minutes saved this session</div></div>
+      <div class="metric"><div class="num" id="mTouch">0</div><div class="lbl">physician touchpoints avoided</div></div>
+      <div class="metric"><div class="num" id="mHours">0</div><div class="lbl">projected hrs/yr per physician</div></div>
+      <div class="metric"><div class="num" id="mFte">0</div><div class="lbl">projected FTE per 100 physicians</div></div>
+    </div>
+    <div class="ledger">${ledger}</div>
+    <div class="payoff-foot">Every draft and task above is real output your staff can act on now.</div>
+  </div>`;
+  let minNow=0, touch=0;
+  for(const id in processed){ const r=QUEUE.find(q=>q.id===id); if(r){ minNow+=r.metrics.saved_minutes; touch+=r.metrics.touchpoint_avoided; } }
+  let proj={}; try{ proj=await (await fetch("/api/office/metrics",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({processed:Object.values(processed)})})).json(); }catch(e){}
+  animateNum("mMin",minNow); animateNum("mTouch",touch);
+  animateNum("mHours",proj.projected_annual_hours_per_physician||0); animateNum("mFte",proj.projected_fte_per_100_physicians||0);
+}
+function animateNum(id,target){
+  const el=$(id); if(!el) return; const isF=!Number.isInteger(target); let start=null;
+  const step=(ts)=>{ if(start===null)start=ts; const p=Math.min(1,(ts-start)/700); const v=target*p;
+    el.textContent=isF?v.toFixed(1):String(Math.round(v)); if(p<1) requestAnimationFrame(step); else el.textContent=String(target); };
+  requestAnimationFrame(step);
 }
 </script>
 </body>

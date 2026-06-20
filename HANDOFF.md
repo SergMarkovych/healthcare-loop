@@ -23,15 +23,17 @@ Local MVP, all pushed, 90 tests + 2 skipped, GitHub Actions CI green:
 - Docker, ADRs (`docs/adr/`), system design (`docs/design/DESIGN.md`).
 - ADO project **HealthCare** (org sandbox-mydev), Epics 580/600/610/631/639/644 closed.
 
-## ⏭ THE open task — AB#648 (do this next)
-**`/office` is NOT usable for a real user** — confusing ("don't know what to do") + feels
-pointless/fake. A `/critic-senior` review confirmed it (results render in an off-screen panel;
-first click is a silent dead-end; cold-start = 0/0/0/0; form stacks below the queue on narrow
-screens). **Fix = build the guided wizard** fully specified in **`docs/design/office-wizard.md`**
-(5-step client-side flow over the *same* endpoints, no backend change). Also fix the `sick_note`
-eliminate-vs-`has_form` contradiction (`backend/office/forms.py:90-93`). Then **browser-verify
-at real viewports (1366px + 800px)** — not just curl/pytest. Lesson from this build:
-*green tests/curl prove it RUNS, not that it's USABLE; verify the rendered experience.*
+## ✅ AB#648 — DONE (Office Assistant guided wizard)
+`/office` was "not usable / feels fake"; a `/critic-senior` pass confirmed it. **Fixed:** rebuilt
+as the 5-step guided wizard in `docs/design/office-wizard.md` (Triage → Your desk → Review →
+Approve → Done payoff with artifact ledger). Pure client-side state machine over the existing
+`/api/office/*` endpoints — no backend change. Also removed the contradictory `sick_note` from
+`forms.FORMS`. **Browser-verified** (Playwright) through all 5 steps at 1280px **and** 800px —
+zero JS errors, clean single-column reflow. See `SESSION-SUMMARY.md` for the full rundown.
+Lesson applied: *green tests prove it RUNS; viewing the render proves it's USABLE.*
+
+No open tasks. The local MVP is complete and usable. Optional non-blocking polish noted in
+`SESSION-SUMMARY.md` (step-5 metrics vs headline; Ollama model chip).
 
 ## Deferred (roadmap, AB#615) — only if asked
 SMART on FHIR, CDS Hooks, Health Canada DPD/CCDD, MIMIC-IV, MTSamples, production stack
