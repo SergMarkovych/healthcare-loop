@@ -82,4 +82,28 @@ SAMPLES = [
             "- Follow up after ENT assessment to coordinate next steps."
         ),
     },
+    {
+        "id": "sample-5",
+        "title": "Chronic mobility impairment — disability documentation",
+        "note": (
+            "Family Medicine — disability assessment (SYNTHETIC)\n"
+            "Patient: Riley Synthetic, 61. Seen to complete disability documentation for long-standing "
+            "mobility impairment.\n\n"
+            "S: Severe, progressive osteoarthritis of both knees and the right hip over the past 4 years. "
+            "Marked difficulty walking — limited to about one block before stopping due to pain. Cannot climb "
+            "a flight of stairs without resting and using a handrail. Needs assistance putting on socks and "
+            "shoes. Uses a cane indoors and outdoors. Pain present most of the day; sleep frequently disrupted.\n\n"
+            "O: Antalgic gait. Reduced range of motion at both knees and the right hip with crepitus. "
+            "Difficulty rising from a seated position unaided.\n\n"
+            "A/P: Severe bilateral knee and right hip osteoarthritis with significant functional limitation.\n"
+            "- Functional impact: walking restricted to ~one block, cannot manage stairs without rest and a "
+            "handrail, requires assistance with lower-body dressing, relies on a cane for all ambulation.\n"
+            "- Condition is chronic and progressive; impairment expected to be prolonged, well beyond 12 "
+            "months, and unlikely to fully resolve.\n"
+            "- Continue analgesia; reinforce home exercise and weight management.\n"
+            "- Refer to physiotherapy; consider orthopedic assessment for joint replacement.\n"
+            "- Follow up in 3 months; sooner if mobility deteriorates or a fall occurs.\n"
+            "- Advised to seek urgent care if a fall causes injury or new inability to bear weight."
+        ),
+    },
 ]

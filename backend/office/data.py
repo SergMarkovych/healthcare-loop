@@ -19,10 +19,13 @@ REQUESTS = [
      "category": "monitoring_requisition", "patient_id": "synthetic-A", "sample_id": None},
     {"id": "req-7", "title": "Referral — pediatric ENT (hearing loss evaluation)",
      "category": "referral_ent", "patient_id": "synthetic-B", "sample_id": "sample-4"},
+    {"id": "req-8", "title": "Disability Tax Credit (T2201) — chronic mobility impairment",
+     "category": "disability_tax_credit", "patient_id": "synthetic-C", "sample_id": "sample-5"},
 ]
 
 # Synthetic demographics (stand-in for the FHIR Patient resource) keyed by patient id.
 DEMOGRAPHICS = {
     "synthetic-A": {"name": "Jordan Sample", "birthDate": "1968-03-12", "gender": "male"},
     "synthetic-B": {"name": "Alex Demo", "birthDate": "1985-07-22", "gender": "female"},
+    "synthetic-C": {"name": "Riley Synthetic", "birthDate": "1965-04-09", "gender": "female"},
 }
