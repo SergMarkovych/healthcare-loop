@@ -172,6 +172,9 @@ const $=(id)=>document.getElementById(id);
 const esc=(s)=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
 const CHECK='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>';
+// On a wizard step change, move focus to the new heading so keyboard/screen-reader
+// users land on the new content instead of being stranded on a removed element.
+function focusHeading(){ const h=$("stage").querySelector("h2,.payoff-head"); if(h){ h.setAttribute("tabindex","-1"); h.focus({preventScroll:true}); } }
 
 let QUEUE=[], AUTO=[], PHYS=[], STEP=1, CURSOR=0;
 const processed={};      // id -> {category, route}
@@ -274,6 +277,7 @@ function renderDesk(){
   const btn=$("startBtn");
   if(next<0){ btn.textContent="See what you saved →"; btn.addEventListener("click", ()=>go(5)); }
   else { CURSOR=next; btn.textContent=`${next>0||Object.keys(processed).some(id=>PHYS.find(p=>p.id===id))?"Continue":"Start"} with ${PHYS[next].title} →`; btn.addEventListener("click", ()=>go(3)); }
+  focusHeading();
 }
 
 // STEP 3 + 4
@@ -288,18 +292,19 @@ async function renderReview(){
   const md=f.fields.filter(x=>x.needs_physician), auto=f.fields.filter(x=>!x.needs_physician);
   const fieldHtml=(fld)=>{
     const big=["functional_limitations","prognosis","work_capacity","school_capacity"].includes(fld.id);
+    const fid=esc(fld.id);
     const ctl=big
-      ? `<textarea data-fid="${fld.id}" data-md="${fld.needs_physician?1:0}" placeholder="${fld.needs_physician?'Your clinical judgement…':''}">${esc(fld.value)}</textarea>`
-      : `<input type="text" data-fid="${fld.id}" data-md="${fld.needs_physician?1:0}" value="${esc(fld.value)}" placeholder="${fld.needs_physician?'Confirm from chart…':''}"/>`;
+      ? `<textarea id="f-${fid}" data-fid="${fid}" data-md="${fld.needs_physician?1:0}" placeholder="${fld.needs_physician?'Your clinical judgement…':''}">${esc(fld.value)}</textarea>`
+      : `<input id="f-${fid}" type="text" data-fid="${fid}" data-md="${fld.needs_physician?1:0}" value="${esc(fld.value)}" placeholder="${fld.needs_physician?'Confirm from chart…':''}"/>`;
     const prov=fld.needs_physician
       ? `<div class="prov"><span class="md-hint">Requires your clinical judgement</span></div>`
       : `<div class="prov"><span class="conf ${fld.confidence==='low'?'low':''}">${esc(fld.confidence)} confidence</span>${fld.evidence?`<span class="ev">from note: ${esc(fld.evidence)}</span>`:``}</div>`;
-    return `<div class="field ${fld.needs_physician?'md':'auto'}"><label>${esc(fld.label)}</label>${ctl}${prov}</div>`;
+    return `<div class="field ${fld.needs_physician?'md':'auto'}"><label for="f-${fid}">${esc(fld.label)}</label>${ctl}${prov}</div>`;
   };
   $("stage").innerHTML=`<div class="stagepanel">
     <h2>${esc(f.title)}</h2>
     <p class="lead">${f.auto_filled} field(s) pre-filled from the chart · ${md.length} need your clinical judgement.</p>
-    <div class="counter" id="counter"></div>
+    <div class="counter" id="counter" aria-live="polite"></div>
     <div class="grouplabel">Your input needed — ${md.length}</div>
     ${md.map(fieldHtml).join("")}
     <details class="fold"><summary>Pre-filled from the chart — ${auto.length} (expand to verify)</summary>${auto.map(fieldHtml).join("")}</details>
@@ -309,6 +314,7 @@ async function renderReview(){
   $("stage").querySelectorAll('[data-md="1"]').forEach(el=>el.addEventListener("input", updateCounter));
   $("approveBtn").addEventListener("click", ()=>approveForm(req));
   updateCounter();
+  focusHeading();
 }
 function mdEls(){ return Array.from($("stage").querySelectorAll('[data-md="1"]')); }
 function updateCounter(){
@@ -328,7 +334,7 @@ async function approveForm(req){
   const d=res.draft;
   if(!d.complete){
     STEP=3; renderRail();
-    $("formResult").innerHTML=`<div class="result"><div class="rt"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Can't finish yet — ${esc((d.outstanding_fields||[]).join(", "))} still needs your clinical judgement. We never fill this for you.</div></div>`;
+    $("formResult").innerHTML=`<div class="result" role="alert"><div class="rt"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Can't finish yet — ${esc((d.outstanding_fields||[]).join(", "))} still needs your clinical judgement. We never fill this for you.</div></div>`;
     const first=mdEls().find(e=>!e.value.trim()); if(first){ first.focus(); first.scrollIntoView({behavior:"smooth",block:"center"}); }
     return;
   }
@@ -367,11 +373,12 @@ async function renderPayoff(){
     <div class="ledger">${ledger}</div>
     <div class="payoff-foot">Every draft and task above is real output your staff can act on now.</div>
   </div>`;
-  let minNow=0, touch=0;
-  for(const id in processed){ const r=QUEUE.find(q=>q.id===id); if(r){ minNow+=r.metrics.saved_minutes; touch+=r.metrics.touchpoint_avoided; } }
+  // Single source of truth: the backend aggregates the same processed list. Don't
+  // re-sum client-side (the request-id lookup is type-fragile and diverged from the headline).
   let proj={}; try{ proj=await (await fetch("/api/office/metrics",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({processed:Object.values(processed)})})).json(); }catch(e){}
-  animateNum("mMin",minNow); animateNum("mTouch",touch);
+  animateNum("mMin",proj.minutes_saved_now||0); animateNum("mTouch",proj.physician_touchpoints_avoided||0);
   animateNum("mHours",proj.projected_annual_hours_per_physician||0); animateNum("mFte",proj.projected_fte_per_100_physicians||0);
+  focusHeading();
 }
 function animateNum(id,target){
   const el=$(id); if(!el) return; const isF=!Number.isInteger(target); let start=null;
