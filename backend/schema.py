@@ -91,6 +91,27 @@ class FollowUpTask(BaseModel):
     confidence: Confidence
 
 
+class FieldDraft(BaseModel):
+    field_id: str
+    value: str
+    evidence: str = Field(default="", description="Verbatim snippet from the note supporting the value; empty if unsupported")
+    confidence: Confidence
+
+
+class FieldDraftSet(BaseModel):
+    drafts: list[FieldDraft] = Field(default_factory=list)
+
+
+class SpecialtyMatch(BaseModel):
+    specialties: list[str] = Field(default_factory=list)
+
+
+class NecessityRoute(BaseModel):
+    route: str
+    who: str
+    reason: str
+
+
 class EncounterExtraction(BaseModel):
     summary: str = Field(description="One-line clinical summary of the encounter")
     problems: list[Problem] = Field(default_factory=list)

@@ -19,7 +19,18 @@ import os
 
 from backend import llm_client
 from backend import mock
-from backend.schema import EncounterExtraction
+from backend.schema import (
+    Confidence,
+    EncounterExtraction,
+    FollowUpTask,
+    Investigation,
+    MedAction,
+    Medication,
+    Owner,
+    Problem,
+    ProblemStatus,
+    Urgency,
+)
 
 FORCE_MOCK = os.environ.get("FORCE_MOCK", "").lower() in ("1", "true", "yes")
 
@@ -39,9 +50,61 @@ SYSTEM_PROMPT = (
 )
 
 
-def _messages(note: str) -> list[dict]:
+_EXAMPLE_NOTE = (
+    "Family Medicine note. 58F with hypothyroidism, reports ongoing fatigue. "
+    "Plan: increase levothyroxine to 75 mcg daily. Order TSH in 6 weeks. "
+    "Advised to take levothyroxine on an empty stomach. "
+    "Return in 3 months; sooner if palpitations or chest pain."
+)
+
+_EXAMPLE = EncounterExtraction(
+    summary="Review of hypothyroidism with ongoing fatigue; levothyroxine dose increased.",
+    problems=[
+        Problem(
+            name="Hypothyroidism",
+            status=ProblemStatus.ongoing,
+            evidence="hypothyroidism, reports ongoing fatigue",
+            confidence=Confidence.high,
+        )
+    ],
+    medications=[
+        Medication(
+            drug="Levothyroxine",
+            action=MedAction.increased,
+            detail="to 75 mcg daily",
+            evidence="increase levothyroxine to 75 mcg daily",
+            confidence=Confidence.high,
+        )
+    ],
+    investigations=[
+        Investigation(
+            name="TSH",
+            reason="Monitor thyroid replacement",
+            urgency=Urgency.routine,
+            evidence="Order TSH in 6 weeks",
+            confidence=Confidence.high,
+        )
+    ],
+    follow_up_tasks=[
+        FollowUpTask(
+            task="Recheck visit",
+            owner=Owner.clinic,
+            timeframe="3 months",
+            priority=Urgency.routine,
+            evidence="Return in 3 months",
+            confidence=Confidence.high,
+        )
+    ],
+    patient_instructions=["Take levothyroxine on an empty stomach."],
+    safety_netting=["Return sooner than 3 months if you develop palpitations or chest pain."],
+)
+
+_EXAMPLE_JSON = _EXAMPLE.model_dump_json()
+
+
+def _user_turn(note: str) -> str:
     schema = json.dumps(EncounterExtraction.model_json_schema())
-    user = (
+    return (
         "Extract the structured follow-up plan from the encounter note below. "
         "Return JSON conforming to this schema:\n"
         f"{schema}\n\n"
@@ -49,9 +112,14 @@ def _messages(note: str) -> list[dict]:
         f"{note}\n"
         "--- END NOTE ---"
     )
+
+
+def _messages(note: str) -> list[dict]:
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user},
+        {"role": "user", "content": _user_turn(_EXAMPLE_NOTE)},
+        {"role": "assistant", "content": _EXAMPLE_JSON},
+        {"role": "user", "content": _user_turn(note)},
     ]
 
 

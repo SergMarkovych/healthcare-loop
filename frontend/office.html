@@ -105,6 +105,8 @@
   .conf.low{color:var(--amber); background:var(--amber-bg); border-color:rgba(168,74,7,.25)}
   .ev{font-family:var(--mono); font-size:10.5px; color:var(--muted); background:var(--surface-2); border:1px solid var(--hair); border-radius:6px; padding:3px 8px; letter-spacing:-.01em}
   .md-hint{font-size:11px; color:var(--amber); font-weight:600}
+  .draft-badge{color:var(--teal-2); background:var(--teal-bg); border-color:#BFE6D8}
+  .field.drafted{box-shadow:inset 0 2px 0 var(--teal)}
 
   details.fold{margin:12px 0; border:1px solid var(--hair); border-radius:var(--r-md); background:var(--surface-2)}
   details.fold>summary{cursor:pointer; padding:11px 14px; font-size:12.5px; font-weight:600; color:var(--muted); list-style:none}
@@ -369,10 +371,12 @@ async function renderReview(){
     const ctl=big
       ? `<textarea id="f-${fid}" data-fid="${fid}" data-md="${fld.needs_physician?1:0}" placeholder="${fld.needs_physician?'Your clinical judgement…':''}">${esc(fld.value)}</textarea>`
       : `<input id="f-${fid}" type="text" data-fid="${fid}" data-md="${fld.needs_physician?1:0}" value="${esc(fld.value)}" placeholder="${fld.needs_physician?'Confirm from chart…':''}"/>`;
-    const prov=fld.needs_physician
+    const prov=fld.drafted
+      ? `<div class="prov"><span class="conf draft-badge">AI draft — verify &amp; sign</span><span class="conf ${fld.confidence==='low'?'low':''}">${esc(fld.confidence)} confidence</span>${fld.evidence?`<span class="ev">from note: ${esc(fld.evidence)}</span>`:``}</div>`
+      : fld.needs_physician
       ? `<div class="prov"><span class="md-hint">Requires your clinical judgement</span></div>`
       : `<div class="prov"><span class="conf ${fld.confidence==='low'?'low':''}">${esc(fld.confidence)} confidence</span>${fld.evidence?`<span class="ev">from note: ${esc(fld.evidence)}</span>`:``}</div>`;
-    return `<div class="field ${fld.needs_physician?'md':'auto'}"><label for="f-${fid}">${esc(fld.label)}</label>${ctl}${prov}</div>`;
+    return `<div class="field ${fld.needs_physician?'md':'auto'}${fld.drafted?' drafted':''}"><label for="f-${fid}">${esc(fld.label)}</label>${ctl}${prov}</div>`;
   };
   const opts=Array.isArray(data.referral_options)?data.referral_options:[];
   const riskBadge=(r)=>{ const cls=r==="low"?"badge-green":r==="high"?"badge-red":"badge-amber"; return `<span class="badge ${cls}">${esc(r)}</span>`; };

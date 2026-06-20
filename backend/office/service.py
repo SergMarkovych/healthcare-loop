@@ -14,7 +14,14 @@ import os
 from backend import llm
 from backend.fhir import action_builder
 from backend.fhir import writer as fhir_writer
-from backend.office import forms, metrics, necessity, referral_intel
+from backend.office import (
+    field_drafter,
+    forms,
+    metrics,
+    necessity,
+    patient_handout,
+    referral_intel,
+)
 from backend.office.data import DEMOGRAPHICS, REQUESTS
 from backend.synthetic_data import SAMPLES
 
@@ -55,12 +62,26 @@ def prefill_request(request_id: str) -> dict:
     extraction, mode = llm.extract(note, req.get("sample_id")) if note else (None, "none")
     patient_context = DEMOGRAPHICS.get(req["patient_id"], {})
 
+    has_extraction = extraction is not None
     if extraction is None:
         # No note to extract from — still produce the form with demographics only.
         from backend.schema import EncounterExtraction
         extraction = EncounterExtraction(summary="")
 
     fl = forms.build_functional_limitations(extraction, patient_context)
+
+    flagged = [k for k in forms.FORMS[form_id]["fields"]
+               if fl.get(k, {}).get("needs_physician") and not fl.get(k, {}).get("value")]
+    field_specs = [{"field_id": k, "label": forms.FIELD_LABELS.get(k, k)} for k in flagged]
+    if has_extraction and field_specs:
+        drafts = field_drafter.draft_clinical_fields(extraction, field_specs)
+        for k, d in drafts.items():
+            cell = fl[k]
+            cell["value"] = d["value"]
+            cell["confidence"] = d["confidence"]
+            cell["evidence"] = d["evidence"]
+            cell["drafted"] = True
+
     form = forms.prefill_form(form_id, fl)
 
     # Referral intelligence: if the request title or category suggests a referral,
@@ -150,6 +171,27 @@ def _write_back(req: dict, task_title: str, task_owner: str, fields: list[dict])
         "questionnaire_response_id": qr_result.get("id"),
         "questionnaire_response_location": qr_result.get("location"),
     }
+
+
+def build_handout_for(request_id: str) -> dict:
+    """Build the patient handout for a request from its linked encounter extraction.
+
+    Resolves the request -> synthetic note like `prefill_request`, extracts, and
+    delegates to the offline `patient_handout` builder. No note -> empty extraction.
+    """
+    req = next((r for r in REQUESTS if r["id"] == request_id), None)
+    if not req:
+        return {"status": "not_found"}
+
+    note = _SAMPLE_NOTE.get(req.get("sample_id") or "", "")
+    if note:
+        extraction, _ = llm.extract(note, req.get("sample_id"))
+    else:
+        from backend.schema import EncounterExtraction
+        extraction = EncounterExtraction(summary="")
+
+    return {"status": "ok", "request_id": request_id,
+            "handout": patient_handout.build_handout(extraction)}
 
 
 def project(processed: list[dict]) -> dict:

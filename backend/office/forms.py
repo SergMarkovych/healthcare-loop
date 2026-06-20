@@ -26,9 +26,9 @@ CANONICAL_FIELDS = [
 ]
 
 
-def _field(value="", role="auto", confidence="medium", evidence="", needs_physician=False):
+def _field(value="", role="auto", confidence="medium", evidence="", needs_physician=False, drafted=False):
     return {"value": value, "role": role, "confidence": confidence,
-            "evidence": evidence, "needs_physician": needs_physician}
+            "evidence": evidence, "needs_physician": needs_physician, "drafted": drafted}
 
 
 def build_functional_limitations(extraction: EncounterExtraction, patient_context: dict | None) -> dict:
@@ -121,6 +121,7 @@ def prefill_form(form_id: str, fl: dict) -> dict:
             "value": cell["value"], "role": cell["role"],
             "confidence": cell["confidence"], "evidence": cell["evidence"],
             "needs_physician": cell["needs_physician"],
+            "drafted": cell.get("drafted", False),
         })
     auto = sum(1 for f in fields if f["role"] == "auto")
     return {"form_id": form_id, "title": spec["title"], "fields": fields,

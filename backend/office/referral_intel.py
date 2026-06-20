@@ -7,7 +7,31 @@ so I lose time and it adds no value to care."
 This module returns a ranked list of available specialists for a given referral
 reason, with a rejection-risk score. Mock data for demo; real impl = EMR /
 provider-directory lookup.
+
+Free-text reason -> specialty mapping uses the local LLM (via llm_client) when a
+model is available, falling back to the deterministic keyword matcher when not.
+The model only selects specialties from the fixed directory; the directory,
+scope-matching, rejection-risk, and ranking stay fully deterministic — the model
+never invents specialties or sets a rejection-risk score. Mock-safe; never raises.
+
+Config via environment variables:
+  FORCE_MOCK  set to 1 to skip the model entirely (keyword matcher only)
 """
+
+import json
+import os
+
+from backend import llm_client
+from backend.schema import SpecialtyMatch
+
+FORCE_MOCK = os.environ.get("FORCE_MOCK", "").lower() in ("1", "true", "yes")
+
+SYSTEM_PROMPT = (
+    "You map a primary-care referral reason to the correct medical specialty(ies), "
+    "chosen ONLY from a fixed list provided. Return specialties exactly as spelled in "
+    "that list; if none fit, return an empty list. Do not invent specialties, do not "
+    "assess rejection risk, do not add commentary. Return ONLY JSON matching the schema."
+)
 
 _RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
 
@@ -74,6 +98,58 @@ def _match_specialties(reason: str) -> list[str]:
             if any(kw in reason for kw in kws)]
 
 
+def _messages(reason: str, known: list[str]) -> list[dict]:
+    schema = json.dumps(SpecialtyMatch.model_json_schema())
+    allowed = json.dumps(known)
+    user = (
+        "Map the referral reason below to specialties drawn ONLY from the allowed list. "
+        "Return JSON conforming to this schema:\n"
+        f"{schema}\n\n"
+        "--- ALLOWED SPECIALTIES ---\n"
+        f"{allowed}\n"
+        "--- REFERRAL REASON ---\n"
+        f"{reason}\n"
+        "--- END REASON ---"
+    )
+    return [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user},
+    ]
+
+
+def _match_specialties_llm(reason: str, known: list[str]) -> list[str]:
+    if FORCE_MOCK or not reason:
+        return []
+
+    try:
+        messages = _messages(reason, known)
+        schema = SpecialtyMatch.model_json_schema()
+
+        match: SpecialtyMatch | None = None
+        for _ in range(2):
+            content = llm_client.call_chat(messages, schema, timeout=60)
+            try:
+                match = SpecialtyMatch.model_validate_json(content)
+                break
+            except Exception as err:  # JSON or schema validation problem
+                messages.append({"role": "assistant", "content": content})
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        f"That response did not validate against the schema: {err}. "
+                        "Return corrected JSON only, no commentary."
+                    ),
+                })
+        if match is None:
+            return []
+
+        return [s for s in match.specialties if s in known]
+
+    except Exception as err:  # connection refused, model not pulled, timeout, etc.
+        print(f"[referral_intel] model unavailable ({err}); keyword fallback.")
+        return []
+
+
 def _accepts_scope(specialist: dict, reason: str) -> bool:
     return any(kw in reason for kw in specialist["accepts"])
 
@@ -103,7 +179,7 @@ def suggest(reason: str, specialty_hint: str = "") -> list[dict]:
         if hint_l:
             specialties = [s for s in _DIRECTORY if s.lower() == hint_l]
         else:
-            specialties = _match_specialties(reason_l)
+            specialties = _match_specialties_llm(reason_l, list(_DIRECTORY)) or _match_specialties(reason_l)
 
         if not specialties:
             return []

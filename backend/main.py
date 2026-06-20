@@ -213,6 +213,11 @@ def office_metrics(req: MetricsRequest) -> dict:
     return office_service.project(req.processed)
 
 
+@app.get("/api/office/handout/{request_id}")
+def office_handout(request_id: str) -> dict:
+    return office_service.build_handout_for(request_id)
+
+
 # --- Actions: close the loop by writing the approved item back to FHIR ---
 # These represent the physician's approval. By default (WRITE_ENABLED unset) they
 # simulate the write and return a synthetic id; with WRITE_ENABLED truthy and a
