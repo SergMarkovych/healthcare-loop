@@ -3,10 +3,11 @@ AI-assisted draft generation for physician-flagged clinical form fields.
 
 The office assistant flags genuine clinical-judgement fields (functional
 limitations, prognosis, work/school capacity, onset, urgency) for the physician
-rather than inventing them. When a local model is available, this module pre-fills
-those flagged fields with a *draft* — a value plus a verbatim evidence snippet and
-a confidence flag, grounded ONLY in the encounter extraction. The physician still
-reviews, edits, and signs everything; drafts stay physician-owned.
+rather than inventing them. When a model is available, this module pre-fills those
+flagged fields with a *draft* — a clinically plausible starting point inferred from
+the encounter's problems/medications, with a supporting evidence snippet and a
+confidence flag. The physician verifies, edits, and signs everything; each draft is
+gated behind an explicit physician confirmation in the UI before it counts as done.
 
 Mirrors backend/llm.py's discipline: enforce the Pydantic JSON schema, temperature
 0 (set in llm_client), validate + retry once on failure, and degrade to no drafts
@@ -25,13 +26,15 @@ from backend.schema import EncounterExtraction, FieldDraftSet
 FORCE_MOCK = os.environ.get("FORCE_MOCK", "").lower() in ("1", "true", "yes")
 
 SYSTEM_PROMPT = (
-    "You draft administrative form fields from ONE primary-care encounter note, for "
-    "PHYSICIAN REVIEW. A physician edits and signs everything you produce — you are "
-    "drafting, not deciding care. Rules: ground every value ONLY in the extraction "
-    "provided; for each field copy a short VERBATIM evidence snippet from the note text "
-    "into `evidence`; if the extraction does not support a field, return it with an empty "
-    "value and confidence \"low\" (or omit it); never invent diagnoses, limitations, "
-    "durations, or prognoses not supported by the data. Return ONLY JSON matching the schema."
+    "You draft administrative form fields from ONE primary-care encounter, as a STARTING "
+    "POINT a physician verifies, edits, and signs — you are drafting, not deciding care. "
+    "For each requested field, write a concise, clinically plausible draft based on the "
+    "encounter's problems, medications, and their status. Put a short supporting snippet "
+    "(a problem name, medication, or note phrase) in `evidence`, and set `confidence`: "
+    "\"high\" if the field is directly stated, \"medium\" or \"low\" if you inferred it from "
+    "the clinical picture. Do not fabricate specific numbers, dates, lab values, or test "
+    "results that are not present. Only leave a value empty if the encounter gives nothing "
+    "at all to base it on. Return ONLY JSON matching the schema."
 )
 
 
