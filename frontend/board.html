@@ -108,6 +108,13 @@
   .att-high{background:var(--rose-bg); color:var(--rose); border-color:#F1C6C1}
   .att-high .dot{background:var(--rose)}
 
+  /* activity pager */
+  .pager{display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    margin-top:16px; padding-top:14px; border-top:1px solid var(--hair-2); font-size:12.5px; color:var(--muted)}
+  .pgbtns{display:flex; align-items:center; gap:10px}
+  .pgbtn{padding:6px 12px; font-size:12.5px}
+  .pgnum{font-variant-numeric:tabular-nums; color:var(--ink); font-weight:600; white-space:nowrap}
+
   /* skeleton rows */
   .sk{display:inline-block; height:11px; border-radius:6px; background:linear-gradient(90deg,var(--hair-2),var(--surface-2),var(--hair-2));
     background-size:200% 100%; animation:shimmer 1.2s linear infinite}
@@ -242,6 +249,8 @@ const $ = (id)=>document.getElementById(id);
 const esc = (s)=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 
 let ACTIVITY = [];          // last loaded activity rows
+let PAGE = 1;               // activity list page (1-based)
+const PAGE_SIZE = 10;       // patients per page
 let LAST_FOCUS_ID = null;   // patient id of the row to restore focus to on Back
 
 // ---- attention badge ----
@@ -330,21 +339,30 @@ async function loadActivity(){
     return;
   }
 
-  // single-scan detection: patients exist but no diff yet (every count is 0).
-  const totalChanges = ACTIVITY.reduce((a,r)=>a+(r.new||0)+(r.updated||0)+(r.not_returned||0),0);
-  const singleScan = totalChanges === 0;
-
+  PAGE = 1;  // reset to first page on every (re)load
   const last = ACTIVITY[0] && ACTIVITY[0].last_scan;
   $("scanMeta").innerHTML = last ? `Last scan: <b>${esc(dateOnly(last))}</b>` : "";
+  renderActivityPage();
+}
 
-  const body = ACTIVITY.map(r=>{
-    const num = (n,noun)=>{
-      const v = singleScan ? "—" : (n||0);
-      const zero = (singleScan || !n) ? " zero" : "";
-      const al = singleScan ? `no changes yet — ${esc(noun)}` : `${n||0} ${esc(noun)}`;
-      return `<td class="cell num${zero}" aria-label="${al}">${esc(v)}</td>`;
-    };
-    return `<tr class="prow" tabindex="0" role="button"
+// Render one page (PAGE_SIZE rows) of ACTIVITY into the table, plus the pager.
+// Re-binds row + pager handlers each call, so paging never refetches.
+function renderActivityPage(){
+  const total = ACTIVITY.length;
+  const singleScan = ACTIVITY.reduce((a,r)=>a+(r.new||0)+(r.updated||0)+(r.not_returned||0),0) === 0;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if(PAGE < 1) PAGE = 1;
+  if(PAGE > pages) PAGE = pages;
+  const start = (PAGE - 1) * PAGE_SIZE;
+  const slice = ACTIVITY.slice(start, start + PAGE_SIZE);
+
+  const num = (n,noun)=>{
+    const v = singleScan ? "—" : (n||0);
+    const zero = (singleScan || !n) ? " zero" : "";
+    const al = singleScan ? `no changes yet — ${esc(noun)}` : `${n||0} ${esc(noun)}`;
+    return `<td class="cell num${zero}" aria-label="${al}">${esc(v)}</td>`;
+  };
+  const body = slice.map(r=>`<tr class="prow" tabindex="0" role="button"
         aria-label="Open context board for ${esc(r.name)}" data-id="${esc(r.id)}">
       <td class="cell"><div class="pn">${esc(r.name)}</div><div class="pid">${esc(r.id)}</div></td>
       ${num(r.new,"new")}
@@ -354,13 +372,22 @@ async function loadActivity(){
       <td class="cell scan">${esc(dateOnly(r.last_scan))}</td>
       <td class="cell">${attBadge(r.data_attention)}</td>
       <td class="cell go" aria-hidden="true">›</td>
-    </tr>`;
-  }).join("");
+    </tr>`).join("");
 
+  const from = total ? start + 1 : 0;
+  const to = Math.min(start + PAGE_SIZE, total);
+  const pager = `<div class="pager">
+      <span class="pginfo" aria-live="polite">Showing ${from}–${to} of ${total} patient${total===1?"":"s"}</span>
+      ${pages > 1 ? `<div class="pgbtns">
+        <button class="btn ghost pgbtn" id="pgPrev" aria-label="Previous page"${PAGE<=1?" disabled":""}>‹ Prev</button>
+        <span class="pgnum">Page ${PAGE} of ${pages}</span>
+        <button class="btn ghost pgbtn" id="pgNext" aria-label="Next page"${PAGE>=pages?" disabled":""}>Next ›</button>
+      </div>` : ``}
+    </div>`;
   const note = singleScan
     ? `<p class="hint" style="margin:14px 0 0">Only one scan so far — run a second scan to see changes.</p>`
     : "";
-  $("activity").innerHTML = tableShell(body) + note;
+  $("activity").innerHTML = tableShell(body) + pager + note;
 
   $("activity").querySelectorAll("tr.prow").forEach(tr=>{
     const id = tr.dataset.id;
@@ -369,6 +396,9 @@ async function loadActivity(){
       if(ev.key==="Enter" || ev.key===" "){ ev.preventDefault(); openBoard(id, tr); }
     });
   });
+  const prev = $("pgPrev"), next = $("pgNext");
+  if(prev) prev.addEventListener("click", ()=>{ if(PAGE > 1){ PAGE--; renderActivityPage(); } });
+  if(next) next.addEventListener("click", ()=>{ if(PAGE < pages){ PAGE++; renderActivityPage(); } });
 }
 
 function showList(){
