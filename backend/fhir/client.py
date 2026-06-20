@@ -80,7 +80,32 @@ class FHIRClient:
         return out
 
     def search_patients(self, count: int = 10) -> list[dict]:
-        return self._paged("/Patient", {"_count": count})
+        """Return at most `count` patients in TOTAL across all Bundle pages.
+
+        `_count` is the server's per-page hint, not a guarantee: a page may
+        return fewer than `count`, so we keep following Bundle.link[next] until
+        we have `count` patients or run out (bounded by MAX_BUNDLE_PAGES, §14).
+        Conversely a server may honor `_count` per page yet still advertise a
+        next link, so we stop chasing once `count` are collected and slice the
+        result to exactly `count` — never exceeding the requested cap.
+        """
+        if count <= 0:
+            return []
+        out: list[dict] = []
+        r = self._client.get("/Patient", params={"_count": count})
+        r.raise_for_status()
+        bundle = r.json()
+        out += _entries(bundle)
+        pages = 1
+        next_url = _next_link(bundle)
+        while len(out) < count and next_url and pages < MAX_BUNDLE_PAGES:
+            r = self._client.get(next_url)  # absolute URL; httpx ignores base_url
+            r.raise_for_status()
+            bundle = r.json()
+            out += _entries(bundle)
+            pages += 1
+            next_url = _next_link(bundle)
+        return out[:count]
 
     def resources_for_patient(
         self, patient_id: str, types: list[str], per_type: int = 50,
