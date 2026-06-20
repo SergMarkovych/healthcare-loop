@@ -60,7 +60,30 @@ def test_verify_fabricated_field_is_ungrounded():
     assert any("diagnosis" in n for n in result.notes)
 
 
-def test_verify_missing_required_field_is_reported():
+def test_verify_missing_required_data_field_is_reported():
+    # No problems extracted -> diagnosis (required DTC auto-DATA field, not a
+    # judgment field) comes back empty: a genuine auto-DATA gap the gate must flag.
+    extraction = EncounterExtraction(summary="x")
+    fl = forms.build_functional_limitations(
+        extraction, {"name": "Jordan Sample", "birthDate": "1968-03-12"}
+    )
+    form = prefill_form("disability_tax_credit", fl)
+
+    req = verifier.from_form("disability_tax_credit", form)
+    result = verifier.verify(req)
+
+    assert result.status == "flag"
+    assert "diagnosis" in result.missing_required
+    dx_field = next(f for f in req.fields if f.name == "diagnosis")
+    assert dx_field.required is True
+    assert dx_field.value is None
+    assert dx_field.not_invented_flag is False
+
+
+def test_verify_empty_judgment_fields_pass_not_missing():
+    # A clean draft: auto-DATA fields grounded, the only empty required fields are
+    # not-invented judgment fields (the MD's to fill) -> status "pass", and those
+    # fields are NOT reported as missing. This is the gate's whole point.
     extraction = EncounterExtraction(
         summary="x",
         problems=[Problem(name="Type 2 diabetes", status=ProblemStatus.ongoing,
@@ -72,14 +95,16 @@ def test_verify_missing_required_field_is_reported():
     form = prefill_form("disability_tax_credit", fl)
 
     req = verifier.from_form("disability_tax_credit", form)
+    judgment = [f for f in req.fields
+                if f.required and f.value is None and f.not_invented_flag]
+    assert judgment, "expected at least one empty required judgment field in this draft"
+
     result = verifier.verify(req)
 
-    assert result.status == "flag"
-    # functional_limitations is a required DTC field the assistant never invents -> empty -> missing.
-    assert "functional_limitations" in result.missing_required
-    fl_field = next(f for f in req.fields if f.name == "functional_limitations")
-    assert fl_field.required is True
-    assert fl_field.value is None
+    assert result.status == "pass"
+    assert result.missing_required == []
+    for f in judgment:
+        assert f.name not in result.missing_required
 
 
 def test_verify_endpoint_round_trip_flags_fabrication(client):

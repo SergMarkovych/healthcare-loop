@@ -3,7 +3,8 @@ Verification gate for the digital medical office assistant (Work Stream 5, ADR-0
 
 A pure, deterministic check on form-filler output. It answers one safety question:
 does every value the assistant put on a form either trace to evidence or carry an
-explicit not-invented flag, and are all required fields present?
+explicit not-invented flag, and is every required auto-DATA field present? Empty
+not-invented judgment fields are the physician's to fill, not a verification gap.
 
 Boundary (ADR-0005 fitness functions): this module reads form-filler output only.
 It imports nothing from backend.fhir, calls no LLM, writes nothing, and selects no
@@ -47,7 +48,10 @@ def verify(req: VerifyRequest) -> VerifyResult:
     for field in req.fields:
         has_value = not _is_empty(field.value)
 
-        if field.required and not has_value:
+        # A required-but-empty field only counts as a DATA gap when it is NOT a
+        # not-invented judgment field — those are the MD's to fill at review, so
+        # counting them as missing would flag every clean draft (gate-defeating).
+        if field.required and not has_value and not field.not_invented_flag:
             missing_required.append(field.name)
             notes.append(f"{field.name}: required field is missing a value")
 
