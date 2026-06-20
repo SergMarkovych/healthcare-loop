@@ -1,5 +1,10 @@
 # Loop — local-first follow-up co-pilot
 
+> **Synthetic data only.** This is a prototype — do not load real patient data (PHI).
+> Every sample note and patient record in this repository is fabricated. Real PHI is
+> governed by PHIPA (Ontario) and is deliberately out of scope. Bring your own LLM API
+> key via a local `.env` (never committed); none is shipped in this repo.
+
 A hackathon scaffold for **Hackers & Healers | AI in Healthcare** (Ottawa).
 It turns a free-text primary-care encounter note into a **structured, reviewable
 follow-up plan** — running entirely on your machine, with a clinician approving or
