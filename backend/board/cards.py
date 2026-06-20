@@ -213,6 +213,20 @@ def _open_workflow_card(current_resources: list[dict]) -> dict:
     return {"id": "open_workflow", "title": "Open workflow", "items": items}
 
 
+# --- Card: completed follow-ups -----------------------------------------------
+
+def _completed_followups_card(completed: list[dict]) -> dict:
+    items: list[dict] = []
+    for row in completed:
+        completed_at = row.get("completed_at") or ""
+        items.append({
+            "text": f"{row['title']} - completed {completed_at[:10]}",
+            "source_reference": f"Task/task-{row['request_id']}",
+            "evidence": {"completed_at": row["completed_at"], "form_id": row["form_id"]},
+        })
+    return {"id": "completed_followups", "title": "Completed follow-ups", "items": items}
+
+
 # --- Card 4: limitations -------------------------------------------------------
 
 _LIMITATION_NOTE = "absent from the API response — reported not-returned, not deleted"
@@ -271,19 +285,22 @@ def _source_references_card(card_list: list[dict], patient_id: str) -> dict:
     return {"id": "source_references", "title": "Source references", "items": items}
 
 
-def build_cards(patient: dict | None, current_resources: list[dict], pdiff: dict) -> list[dict]:
+def build_cards(patient: dict | None, current_resources: list[dict], pdiff: dict,
+                completed_followups: list[dict] | None = None) -> list[dict]:
     patient_id = (patient or {}).get("id") or _patient_id_from(current_resources, pdiff)
+    completed = completed_followups if completed_followups is not None else []
 
     snapshot = _snapshot_card(patient, current_resources)
     new_updated = _new_updated_card(current_resources, pdiff, patient_id)
     open_workflow = _open_workflow_card(current_resources)
+    completed_card = _completed_followups_card(completed)
     limitations = _limitations_card(patient, current_resources, pdiff, patient_id)
 
     source_refs = _source_references_card(
-        [snapshot, new_updated, open_workflow, limitations], patient_id
+        [snapshot, new_updated, open_workflow, completed_card, limitations], patient_id
     )
 
-    return [snapshot, new_updated, open_workflow, limitations, source_refs]
+    return [snapshot, new_updated, open_workflow, completed_card, limitations, source_refs]
 
 
 def _patient_id_from(current_resources: list[dict], pdiff: dict) -> str:

@@ -10,9 +10,11 @@ Flow:
 """
 
 import os
+from datetime import datetime, timezone
 
 from backend import llm
 from backend.fhir import action_builder
+from backend.fhir import store
 from backend.fhir import writer as fhir_writer
 from backend.office import (
     field_drafter,
@@ -174,6 +176,24 @@ def approve_request(request_id: str, completed_fields: dict | None = None) -> di
     result = {"status": "ok", "request": req, "route": base["route"],
               "draft": draft, "follow_up_task": task,
               "metrics": metrics.per_task(req["category"], base["route"])}
+
+    # Persist the completed follow-up to the local board store UNCONDITIONALLY —
+    # WRITE_ENABLED gates only the FHIR write-back below, not local persistence.
+    conn = store.connect()
+    try:
+        store.init_db(conn)
+        store.save_completed_followup(
+            conn,
+            patient_id=req["patient_id"],
+            request_id=request_id,
+            form_id=draft["form_id"],
+            title=task["title"],
+            draft=draft,
+            completed_at=datetime.now(timezone.utc).isoformat(),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
     # Close the loop to the EMR: when writes are enabled, also write the follow-up
     # Task and a QuestionnaireResponse built from the completed form. Off by default,

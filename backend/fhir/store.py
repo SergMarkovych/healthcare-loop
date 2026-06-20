@@ -7,6 +7,7 @@ diff) plus a content hash (for fast change classification). Synthetic/test data
 only in the hackathon — production needs encryption, RBAC, and audit.
 """
 
+import json
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -69,8 +70,14 @@ def init_db(conn: sqlite3.Connection) -> None:
             curr_snapshot_id INTEGER,
             created_at TEXT
         );
+        CREATE TABLE IF NOT EXISTS completed_followup (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id TEXT, request_id TEXT, form_id TEXT, title TEXT,
+            completed_at TEXT, draft_json TEXT
+        );
         CREATE INDEX IF NOT EXISTS idx_snap_scan ON resource_snapshot(scan_run_id);
         CREATE INDEX IF NOT EXISTS idx_diff_scan ON resource_diff(scan_run_id);
+        CREATE INDEX IF NOT EXISTS idx_cf_patient ON completed_followup(patient_id);
         """
     )
     _upgrade_scan_run_columns(conn)
@@ -130,6 +137,32 @@ def save_snapshot(conn: sqlite3.Connection, scan_run_id: int, res: dict) -> int:
         ),
     )
     return cur.lastrowid
+
+
+def save_completed_followup(conn: sqlite3.Connection, patient_id: str, request_id: str,
+                            form_id: str | None, title: str, draft: dict,
+                            completed_at: str) -> int:
+    cur = conn.execute(
+        """INSERT INTO completed_followup
+           (patient_id, request_id, form_id, title, completed_at, draft_json)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (patient_id, request_id, form_id, title, completed_at, json.dumps(draft)),
+    )
+    return cur.lastrowid
+
+
+def list_completed_followups(conn: sqlite3.Connection, patient_id: str) -> list[dict]:
+    rows = conn.execute(
+        """SELECT * FROM completed_followup WHERE patient_id = ?
+           ORDER BY completed_at DESC, id DESC""",
+        (patient_id,),
+    ).fetchall()
+    result: list[dict] = []
+    for row in rows:
+        rec = dict(row)
+        rec["draft"] = json.loads(rec.pop("draft_json")) if rec.get("draft_json") else None
+        result.append(rec)
+    return result
 
 
 def finalize_scan_run(conn: sqlite3.Connection, scan_run_id: int, count: int) -> None:
@@ -202,6 +235,7 @@ def load_snapshot_map(conn: sqlite3.Connection, scan_run_id: int) -> dict[str, s
 
 def reset(conn: sqlite3.Connection) -> None:
     conn.executescript(
-        "DELETE FROM resource_diff; DELETE FROM resource_snapshot; DELETE FROM scan_run;"
+        "DELETE FROM resource_diff; DELETE FROM resource_snapshot; DELETE FROM scan_run; "
+        "DELETE FROM completed_followup;"
     )
     conn.commit()

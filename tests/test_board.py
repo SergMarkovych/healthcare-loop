@@ -12,6 +12,7 @@ may leak into any card item.
 """
 
 from backend.board import service as board_service
+from backend.office import service as office_service
 
 # Same forbidden-wording family the summarize safety filter guards against.
 _FORBIDDEN = [
@@ -20,7 +21,8 @@ _FORBIDDEN = [
     "risk score", "treatment",
 ]
 
-_CARD_IDS = ["patient_snapshot", "new_updated", "open_workflow", "limitations", "source_references"]
+_CARD_IDS = ["patient_snapshot", "new_updated", "open_workflow",
+             "completed_followups", "limitations", "source_references"]
 
 
 def _run_two_scans(fhir_service):
@@ -38,7 +40,7 @@ def _all_text(card: dict) -> str:
     return " ".join(i.get("text", "") for i in card["items"]).lower()
 
 
-def test_board_has_canonical_five_cards_in_order(fresh_store):
+def test_board_has_canonical_cards_in_order(fresh_store):
     _run_two_scans(fresh_store)
     board = board_service.get_board("synthetic-A")
     assert board["status"] == "ok"
@@ -198,3 +200,33 @@ def test_no_scans_returns_neutral_shape(fresh_store):
     assert board["cards"] == []
     assert board["flags"] == []
     assert board["sources"] == []
+
+
+def test_approved_followup_surfaces_on_patient_board(fresh_store):
+    _run_two_scans(fresh_store)
+
+    # req-5: synthetic-B (Alex Demo) school accommodation note.
+    approved = office_service.approve_request("req-5")
+    assert approved["status"] == "ok"
+    title = approved["follow_up_task"]["title"]
+
+    board = board_service.get_board("synthetic-B")
+    assert board["status"] == "ok"
+
+    cf = _card(board, "completed_followups")
+    matching = [i for i in cf["items"] if title in i["text"]]
+    assert matching, [i["text"] for i in cf["items"]]
+    item = matching[0]
+    assert item["source_reference"] == "Task/task-req-5"
+    assert "completed" in item["text"]
+    assert item["evidence"]["form_id"] == "school_note"
+
+
+def test_completed_followup_surfaces_even_without_scans(fresh_store):
+    # No scans run; the patient has no FHIR data, but an approved follow-up
+    # must still produce an "ok" board carrying the completed_followups card.
+    office_service.approve_request("req-5")
+    board = board_service.get_board("synthetic-B")
+    assert board["status"] == "ok"
+    cf = _card(board, "completed_followups")
+    assert cf["items"]

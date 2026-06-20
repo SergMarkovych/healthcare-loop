@@ -93,6 +93,41 @@ def test_scan_run_marked_complete_with_timestamp(fresh_store):
     assert sr["completed_at"]
 
 
+# --- completed follow-up persistence (AB#690) -------------------------------
+
+def test_completed_followup_round_trip(tmp_path):
+    conn = store.connect(str(tmp_path / "cf.db"))
+    try:
+        draft = {"form_id": "sick_note", "title": "Sick note", "complete": True,
+                 "fields": [{"id": "onset_date", "value": "2026-06"}]}
+        rid = store.save_completed_followup(
+            conn, patient_id="synthetic-B", request_id="req-1",
+            form_id="sick_note", title="Issue patient attestation",
+            draft=draft, completed_at="2026-06-20T10:00:00+00:00")
+        assert rid > 0
+
+        store.save_completed_followup(
+            conn, patient_id="synthetic-B", request_id="req-5",
+            form_id="school_note", title="Send accommodation note",
+            draft={"form_id": "school_note"}, completed_at="2026-06-21T10:00:00+00:00")
+        store.save_completed_followup(
+            conn, patient_id="synthetic-A", request_id="req-2",
+            form_id="disability_tax_credit", title="Submit T2201",
+            draft={}, completed_at="2026-06-19T10:00:00+00:00")
+        conn.commit()
+
+        rows = store.list_completed_followups(conn, "synthetic-B")
+        assert [r["request_id"] for r in rows] == ["req-5", "req-1"]
+        first = rows[1]
+        assert first["title"] == "Issue patient attestation"
+        assert first["form_id"] == "sick_note"
+        assert first["draft"] == draft
+
+        assert store.list_completed_followups(conn, "synthetic-C") == []
+    finally:
+        conn.close()
+
+
 # --- pagination (§14) -------------------------------------------------------
 
 def _bundle(entries, next_url=None):

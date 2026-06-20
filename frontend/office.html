@@ -75,6 +75,11 @@
   .req.r-physician_review{border-left-color:var(--amber)}
   .req.r-delegate{border-left-color:var(--slate)}
   .req.resolved{opacity:.9}
+  .req.skipped{opacity:.6; border-left-color:var(--faint); background:var(--surface-2)}
+  .req-sel{display:inline-flex; align-items:center; flex:0 0 auto; margin-right:2px}
+  .req-sel input{width:16px; height:16px; accent-color:var(--teal); cursor:pointer}
+  .req-sel input:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+  .skip-line{margin-top:9px; font-size:12.5px; color:var(--faint); font-weight:600}
   .req-top{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
   .req-title{font-weight:620; font-size:14px; letter-spacing:-.01em}
   .route{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; letter-spacing:.02em}
@@ -233,6 +238,7 @@ const CHECK='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke=
 function focusHeading(){ const h=$("stage").querySelector("h2,.payoff-head"); if(h){ h.setAttribute("tabindex","-1"); h.focus({preventScroll:true}); } }
 
 let QUEUE=[], AUTO=[], PHYS=[], STEP=1, CURSOR=0;
+const selected=new Set();   // request ids the office manager chose to generate (default: all)
 const processed={};      // id -> {category, route}
 const artifacts=[];      // ledger entries
 let currentReq=null;
@@ -276,6 +282,7 @@ let PATIENT_NAME="";
   try{ const h=await (await fetch("/api/health")).json(); const p=h.force_mock?"mock":h.provider; applyProvider(p); probeProvider(p); }catch(e){}
   const url=PATIENT_ID?`/api/office/requests?patient=${encodeURIComponent(PATIENT_ID)}`:"/api/office/requests";
   try{ QUEUE=await (await fetch(url)).json(); }catch(e){ QUEUE=[]; }
+  QUEUE.forEach(r=>selected.add(r.id));   // every request checked by default
   AUTO=QUEUE.filter(r=>r.route!=="physician_review");
   PHYS=QUEUE.filter(r=>r.route==="physician_review");
   if(PATIENT_ID){
@@ -316,10 +323,15 @@ function go(step){ STEP=step; renderRail();
   if(step===1) renderTriage(); else if(step===2) renderDesk(); else if(step===3) renderReview(); else if(step===5) renderPayoff();
 }
 function routePill(r,txt){ return `<span class="route ${(r==="eliminate"||r==="automate")?r:r}">${esc(txt||ROUTE_LABEL[r])}</span>`; }
-function reqCard(req, tail){
+function reqCard(req, tail, selectable){
   const m=req.metrics;
-  return `<div class="req r-${req.route}" data-id="${esc(req.id)}">
-    <div class="req-top"><span class="req-title">${esc(req.title)}</span> ${routePill(req.route)}</div>
+  const checked=selected.has(req.id);
+  const sel=selectable
+    ? `<span class="req-sel"><input type="checkbox" class="req-chk" data-id="${esc(req.id)}" ${checked?"checked":""}
+         aria-label="Generate document for ${esc(req.title)}" title="Generate this document"/></span>`
+    : "";
+  return `<div class="req r-${req.route}${selectable&&!checked?" skipped":""}" data-id="${esc(req.id)}">
+    <div class="req-top">${sel}<span class="req-title">${esc(req.title)}</span> ${routePill(req.route)}</div>
     <p class="req-reason">${esc(req.reason)}</p>
     <div class="req-meta"><span>Handled by <b>${esc(req.who)}</b></span><span>Saves <b>${m.saved_minutes} min</b></span></div>
     ${tail||""}
@@ -328,28 +340,49 @@ function reqCard(req, tail){
 
 // STEP 1
 function renderTriage(){
-  for(const req of AUTO){
-    if(!processed[req.id]){
-      processed[req.id]={category:req.category,route:req.route};
-      artifacts.push({kind:"auto", title:`${req.title}`, sub:autoBody(req)});
-    }
-  }
   const autoMin=AUTO.reduce((a,r)=>a+r.metrics.saved_minutes,0);
   $("stage").innerHTML=`<div class="stagepanel">
     <h2>Triage the inbox</h2>
     <div class="differentiation-bar">
       The inbox manager routes and labels documents. Loop acts on them — generates the referral, pre-fills the form, queues the follow-up.
     </div>
-    <p class="lead">${QUEUE.length} requests came in. The necessity gate sorted them — ${AUTO.length} were handled automatically, ${PHYS.length} need your clinical judgement.</p>
+    <p class="lead">${QUEUE.length} requests came in. The necessity gate sorted them — ${AUTO.length} were handled automatically, ${PHYS.length} need your clinical judgement. Uncheck any document you don't want generated.</p>
     <div class="clearedrow">${CHECK}${AUTO.length} handled automatically — ${autoMin} min saved, ${AUTO.length} physician touchpoint${AUTO.length===1?"":"s"} avoided</div>
     <div class="grouplabel">Handled without you — ${AUTO.length}</div>
-    <div id="autoGroup">${AUTO.map(r=>reqCard(r, `<div class="resolved-line">${CHECK}${esc(autoBody(r))}</div>`)).join("")}</div>
+    <div id="autoGroup">${AUTO.map(r=>reqCard(r, `<div class="resolved-line">${CHECK}${esc(autoBody(r))}</div>`, true)).join("")}</div>
     <div class="grouplabel">Needs your clinical judgement — ${PHYS.length}</div>
-    <div id="physGroup">${PHYS.map(r=>reqCard(r)).join("")}</div>
-    <div class="primary-row"><button class="btn lg" id="goDeskBtn">${PHYS.length?`Continue → ${PHYS.length} form${PHYS.length===1?"":"s"} need you`:"See what you saved →"}</button></div>
+    <div id="physGroup">${PHYS.map(r=>reqCard(r, "", true)).join("")}</div>
+    <div class="primary-row"><button class="btn lg" id="goDeskBtn"></button></div>
   </div>`;
-  $("goDeskBtn").addEventListener("click", ()=>go(PHYS.length?2:5));
+  $("stage").querySelectorAll(".req-chk").forEach(el=>el.addEventListener("change", onTriageToggle));
+  updateGenerateBtn();
+  $("goDeskBtn").addEventListener("click", generateSelected);
   focusHeading();
+}
+function onTriageToggle(e){
+  const id=e.target.dataset.id, card=e.target.closest(".req");
+  if(e.target.checked){ selected.add(id); if(card) card.classList.remove("skipped"); }
+  else { selected.delete(id); if(card) card.classList.add("skipped"); }
+  updateGenerateBtn();
+}
+function updateGenerateBtn(){
+  const btn=$("goDeskBtn"); if(!btn) return;
+  const n=QUEUE.filter(r=>selected.has(r.id)).length;
+  btn.disabled=n===0;
+  btn.textContent=n===0?"Select at least one document" : `Generate selected → ${n} document${n===1?"":"s"}`;
+}
+// Process only the checked requests: auto-handle the selected AUTO items, narrow
+// PHYS to the selected physician-review forms, then advance to the desk (or payoff).
+function generateSelected(){
+  for(const req of AUTO){
+    if(selected.has(req.id) && !processed[req.id]){
+      processed[req.id]={category:req.category,route:req.route};
+      artifacts.push({kind:"auto", title:`${req.title}`, sub:autoBody(req)});
+    }
+  }
+  PHYS=QUEUE.filter(r=>r.route==="physician_review" && selected.has(r.id));
+  CURSOR=0;
+  go(PHYS.length?2:5);
 }
 function autoBody(req){
   if(req.route==="eliminate") return "Patient attestation issued — no physician certification required.";

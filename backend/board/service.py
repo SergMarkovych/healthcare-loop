@@ -11,15 +11,26 @@ from backend.board import cards
 from backend.fhir import diff as diffmod
 from backend.fhir import rules
 from backend.fhir import service as fhir_service
+from backend.fhir import store
 
 
 def _empty_pdiff() -> dict:
     return {"new": [], "updated": [], "not_returned": [], "counts": {}}
 
 
+def _completed_for(patient_id: str) -> list[dict]:
+    conn = store.connect()
+    try:
+        return store.list_completed_followups(conn, patient_id)
+    finally:
+        conn.close()
+
+
 def get_board(patient_id: str) -> dict:
     patient, current_resources = fhir_service.current_resources_for_patient(patient_id)
-    if patient is None and not current_resources:
+    completed = _completed_for(patient_id)
+
+    if patient is None and not current_resources and not completed:
         return {"status": "no_scans", "mode": "deterministic",
                 "patient": {"id": patient_id, "name": None},
                 "cards": [], "flags": [], "sources": []}
@@ -28,7 +39,8 @@ def get_board(patient_id: str) -> dict:
     pdiff = (diffmod.filter_for_patient(full["diff"], patient_id)
              if full.get("status") == "ok" else _empty_pdiff())
 
-    card_list = cards.build_cards(patient, current_resources, pdiff)
+    card_list = cards.build_cards(patient, current_resources, pdiff,
+                                  completed_followups=completed)
     flags = rules.evaluate(pdiff, current_resources, patient_id)
 
     sources = sorted({
