@@ -10,7 +10,10 @@ Two scan sources:
 import json
 import os
 
+import httpx
+
 from backend.fhir import diff as diffmod
+from backend.fhir import normalize as norm
 from backend.fhir import store
 from backend.fhir import summarize
 from backend.fhir.client import CORE_TYPES, FHIRClient
@@ -25,19 +28,25 @@ def load_fixture(which: int) -> list[dict]:
         return json.load(f)
 
 
+def _capability_meta(cap: dict) -> tuple[str | None, str | None]:
+    """Extract (server software label, fhirVersion) from a CapabilityStatement."""
+    sw = cap.get("software") if isinstance(cap.get("software"), dict) else {}
+    name, version = sw.get("name"), sw.get("version")
+    if name and version:
+        server_software = f"{name} {version}"
+    else:
+        server_software = name or version or None
+    return server_software, cap.get("fhirVersion")
+
+
 def run_scan(source: str = "fixtures", which: int | None = None,
              base_url: str | None = None, patient_count: int = 5) -> dict:
     if source == "live":
-        client = FHIRClient(base_url or FHIR_BASE_URL)
-        try:
-            resources = client.scan(patient_count=patient_count, types=CORE_TYPES)
-            label = f"live:{client.base_url}"
-        finally:
-            client.close()
-    else:
-        which = which if which in (1, 2) else 1
-        resources = load_fixture(which)
-        label = f"fixtures:scan_{which}"
+        return _run_live_scan(base_url or FHIR_BASE_URL, patient_count)
+
+    which = which if which in (1, 2) else 1
+    resources = load_fixture(which)
+    label = f"fixtures:scan_{which}"
 
     conn = store.connect()
     try:
@@ -45,15 +54,107 @@ def run_scan(source: str = "fixtures", which: int | None = None,
         for res in resources:
             store.save_snapshot(conn, scan_id, res)
         store.finalize_scan_run(conn, scan_id, len(resources))
-        patients = [
-            {"id": r.get("id"), "name": _name(r)}
-            for r in resources if r.get("resourceType") == "Patient"
-        ]
+        _persist_diff_for(conn, scan_id, scan_errors=[])
+        patients = _patient_list(resources)
     finally:
         conn.close()
 
     return {"scan_run_id": scan_id, "source": label,
             "resource_count": len(resources), "patients": patients}
+
+
+def _run_live_scan(base_url: str, patient_count: int) -> dict:
+    client = FHIRClient(base_url)
+    label = f"live:{client.base_url}"
+    conn = store.connect()
+    scan_id = store.create_scan_run(conn, label, source_base_url=client.base_url)
+    try:
+        # §12: verify the server speaks FHIR (and record what it claims) BEFORE
+        # we scan. A failed /metadata marks the run errored and returns a status
+        # dict rather than raising into the caller.
+        try:
+            cap = client.capability()
+            server_software, fhir_version = _capability_meta(cap)
+            store.record_capability(conn, scan_id, server_software, fhir_version)
+        except httpx.HTTPError as err:
+            msg = f"capability check failed: {err}"
+            store.fail_scan_run(conn, scan_id, msg)
+            return {"status": "error", "scan_run_id": scan_id, "source": label, "message": msg}
+
+        try:
+            resources, scan_errors = client.scan(patient_count=patient_count, types=CORE_TYPES)
+        except httpx.HTTPError as err:
+            msg = f"scan failed: {err}"
+            store.fail_scan_run(conn, scan_id, msg)
+            return {"status": "error", "scan_run_id": scan_id, "source": label, "message": msg}
+
+        for res in resources:
+            store.save_snapshot(conn, scan_id, res)
+        store.finalize_scan_run(conn, scan_id, len(resources))
+        _persist_diff_for(conn, scan_id, scan_errors=scan_errors)
+        patients = _patient_list(resources)
+    finally:
+        conn.close()
+        client.close()
+
+    return {"status": "ok", "scan_run_id": scan_id, "source": label,
+            "resource_count": len(resources), "patients": patients}
+
+
+def _patient_list(resources: list[dict]) -> list[dict]:
+    return [
+        {"id": r.get("id"), "name": _name(r)}
+        for r in resources if r.get("resourceType") == "Patient"
+    ]
+
+
+def _persist_diff_for(conn, curr_id: int, scan_errors: list[dict]) -> int:
+    """Write one resource_diff row per resource key for this scan run (§12.3).
+
+    Compares the current scan against the immediately-previous one. On the first
+    scan there is no predecessor, so every current key is recorded as 'new'.
+    Per-type fetch failures (§21) are recorded as 'error' rows so a missing
+    resource caused by an API error is distinguishable from a clean 'not_returned'.
+    Returns the number of rows written.
+    """
+    prev_id, _curr = store.last_two_scan_ids(conn)
+    curr_map = store.load_snapshot_map(conn, curr_id)
+    prev_map = store.load_snapshot_map(conn, prev_id) if prev_id is not None else {}
+    classified = diffmod.classify(prev_map, curr_map)
+
+    def _curr_sid(key: str) -> int | None:
+        row = curr_map.get(key)
+        return row["id"] if row is not None else None
+
+    def _prev_sid(key: str) -> int | None:
+        row = prev_map.get(key)
+        return row["id"] if row is not None else None
+
+    written = 0
+    for status in ("new", "updated", "unchanged", "not_returned"):
+        for item in classified.get(status, []):
+            key = item["key"]
+            diff_json = None
+            if status == "updated":
+                diff_json = norm.stable_json(item.get("field_changes", []))
+            store.save_resource_diff(
+                conn, curr_id, key, item.get("resource_type"), item.get("patient_id"),
+                status, diff_json=diff_json,
+                prev_snapshot_id=_prev_sid(key), curr_snapshot_id=_curr_sid(key),
+            )
+            written += 1
+
+    for err in scan_errors:
+        rtype = err.get("resource_type")
+        pid = err.get("patient_id")
+        store.save_resource_diff(
+            conn, curr_id, f"{rtype}/?patient={pid}", rtype, pid, "error",
+            diff_json=norm.stable_json({"error": err.get("error")}),
+        )
+        written += 1
+
+    conn.commit()
+    return written
 
 
 def diff_last_two() -> dict:
