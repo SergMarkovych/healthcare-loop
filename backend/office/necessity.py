@@ -58,10 +58,6 @@ _RULES = {
         "Routine monitoring bloodwork follows a standing schedule; generate the requisition "
         "automatically.",
     ),
-    "form_completion_admin": (
-        "delegate", "admin",
-        "Administrative form fields can be completed by office staff from chart data.",
-    ),
     "disability_tax_credit": (
         "physician_review", "physician",
         "Certifying functional limitations requires clinical judgement. Pre-fill the known "

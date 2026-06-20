@@ -1,7 +1,9 @@
 # Demo script — Office Assistant (Direction B) · ≈90 seconds
 
-Runs in **mock / deterministic mode** — no model, no network. The demo cannot fail on
-stage. Open **`http://127.0.0.1:8000/office`**.
+Runs on the **AI model** (OpenRouter) by default — real extraction, restated from
+source. The header toggle has an **Offline (mock)** mode that is fully deterministic and
+needs no network: flip to it for a demo that **cannot fail on stage**. Open
+**`http://127.0.0.1:8000/office`**.
 
 > One-liner to open with: *"Family physicians lose ~19 hours a week to admin, and over
 > half of it doesn't need a physician at all. We don't speed up the paperwork — we keep
@@ -31,6 +33,20 @@ Open the **Disability Tax Credit (T2201)** request → route **physician_review*
 
 This is the safety story: the AI restates source-backed facts and stops at the line
 where judgement begins.
+
+## Beat 2.5 — referral intelligence (the wedge nobody else has) (~20s)
+Open the **pediatric ENT referral** request. Above the form, point at **Suggested
+specialists**:
+
+- *"A physician on the COMPASS panel said it out loud: 'they're all ENTs, but I don't
+  know which one sees this problem — so I lose time and it adds no value to care.'"*
+- The panel ranks the directory for **this indication**: Dr. Anand **accepts** pediatric
+  hearing loss (low rejection risk, top); Dr. Webb is adult-only (**high** risk, flagged).
+  *"Loop knows the scope, so the referral lands the first time instead of bouncing."*
+- Click the top row → it pre-fills **Referred to**. One click replaces the lookup.
+
+Why this beat matters: the AI scribe and the inbox manager both stop at the note — neither
+solves *"which specialist."* This is the gap, and it's the most demoable part of the build.
 
 ## Beat 3 — the measured moment (~25s)
 Show the **metric strip**: minutes saved on this batch, physician touchpoints avoided,
