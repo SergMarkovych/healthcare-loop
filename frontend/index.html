@@ -201,9 +201,8 @@
   </nav>
   <button class="demo-btn" id="demoBtn" onclick="startDemo()">▶ Demo</button>
   <div class="provider-toggle" id="providerToggle" aria-label="LLM provider">
-    <button class="ptbtn" data-p="mock" onclick="setProvider('mock')">Mock</button>
-    <button class="ptbtn" data-p="ollama" onclick="setProvider('ollama')">Ollama</button>
-    <button class="ptbtn" data-p="openrouter" onclick="setProvider('openrouter')">OpenRouter</button>
+    <button class="ptbtn" data-p="openrouter" onclick="setProvider('openrouter')">AI model</button>
+    <button class="ptbtn" data-p="mock" onclick="setProvider('mock')">Offline (mock)</button>
   </div>
   <span id="providerStatus" class="pstatus hidden"></span>
   <span id="privacyChip" class="chip" title="No encounter text leaves this device. Demo runs on synthetic data only.">
@@ -305,9 +304,9 @@ function applyProvider(p){
   if(pc) pc.title=p==="openrouter"?"Synthetic data · sent to OpenRouter API · no real PHI":"No encounter text leaves this device. Demo runs on synthetic data only.";
   const db=$("demoBtn");
   if(db){
-    const label={mock:"Mock",ollama:"Ollama",openrouter:"OpenRouter"}[p]||p;
+    const label={openrouter:"AI model",mock:"Offline (mock)"}[p]||p;
     db.textContent="▶ Demo · "+label;
-    db.title="Run demo using "+label+" provider";
+    db.title="Run demo using the "+label;
   }
 }
 async function probeProvider(p){
