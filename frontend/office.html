@@ -280,7 +280,7 @@ async function setProvider(p){
 })();
 
 function renderRail(){
-  const sub=(STEP===3||STEP===4)&&PHYS.length>1?` · ${CURSOR+1} of ${PHYS.length}`:"";
+  const sub=(STEP===3||STEP===4)&&PHYS.length>1?` · form ${CURSOR+1} of ${PHYS.length}`:"";
   $("rail").innerHTML=STEPS.map((s,i)=>{
     const n=i+1, cls=n<STEP?"done":(n===STEP?"active":"");
     return `<div class="step ${cls}"><span class="node">${n<STEP?"✓":n}</span><span class="lbl">${esc(s[0])}${n===STEP?sub:""}</span></div>`
@@ -304,19 +304,28 @@ function reqCard(req, tail){
 
 // STEP 1
 function renderTriage(){
+  for(const req of AUTO){
+    if(!processed[req.id]){
+      processed[req.id]={category:req.category,route:req.route};
+      artifacts.push({kind:"auto", title:`${req.title}`, sub:autoBody(req)});
+    }
+  }
+  const autoMin=AUTO.reduce((a,r)=>a+r.metrics.saved_minutes,0);
   $("stage").innerHTML=`<div class="stagepanel">
     <h2>Triage the inbox</h2>
     <div class="differentiation-bar">
       The inbox manager routes and labels documents. Loop acts on them — generates the referral, pre-fills the form, queues the follow-up.
     </div>
-    <p class="lead">${QUEUE.length} requests came in. The necessity gate already decided which ones need a physician.</p>
+    <p class="lead">${QUEUE.length} requests came in. The necessity gate sorted them — ${AUTO.length} were handled automatically, ${PHYS.length} need your clinical judgement.</p>
+    <div class="clearedrow">${CHECK}${AUTO.length} handled automatically — ${autoMin} min saved, ${AUTO.length} physician touchpoint${AUTO.length===1?"":"s"} avoided</div>
     <div class="grouplabel">Handled without you — ${AUTO.length}</div>
-    <div id="autoGroup">${AUTO.map(r=>reqCard(r)).join("")}</div>
+    <div id="autoGroup">${AUTO.map(r=>reqCard(r, `<div class="resolved-line">${CHECK}${esc(autoBody(r))}</div>`)).join("")}</div>
     <div class="grouplabel">Needs your clinical judgement — ${PHYS.length}</div>
     <div id="physGroup">${PHYS.map(r=>reqCard(r)).join("")}</div>
-    <div class="primary-row"><button class="btn lg" id="clearBtn">Clear the ${AUTO.length} automatic item${AUTO.length===1?"":"s"} →</button></div>
+    <div class="primary-row"><button class="btn lg" id="goDeskBtn">${PHYS.length?`Continue → ${PHYS.length} form${PHYS.length===1?"":"s"} need you`:"See what you saved →"}</button></div>
   </div>`;
-  $("clearBtn").addEventListener("click", clearAutomatic);
+  $("goDeskBtn").addEventListener("click", ()=>go(PHYS.length?2:5));
+  focusHeading();
 }
 function autoBody(req){
   if(req.route==="eliminate") return "Patient attestation issued — no physician certification required.";
@@ -355,11 +364,16 @@ function renderDesk(){
         ? `<div class="resolved-line">${CHECK}Approved — draft + task created</div>`
         : `<div class="req-meta"><span>${esc(r.form_title||"Form")}</span></div>`)).join("")}</div>
     <div class="primary-row"><button class="btn lg" id="startBtn"></button></div>
+    <div id="seeSavedRow" style="margin-top:10px;text-align:center"></div>
   </div>`;
   const next=PHYS.findIndex(r=>!processed[r.id]);
+  const physDone=PHYS.filter(p=>processed[p.id]).length;
   const btn=$("startBtn");
   if(next<0){ btn.textContent="See what you saved →"; btn.addEventListener("click", ()=>go(5)); }
-  else { CURSOR=next; btn.textContent=`${next>0||Object.keys(processed).some(id=>PHYS.find(p=>p.id===id))?"Continue":"Start"} with ${PHYS[next].title} →`; btn.addEventListener("click", ()=>go(3)); }
+  else {
+    CURSOR=next; btn.textContent=`${physDone?"Continue":"Start"} with ${PHYS[next].title} →`; btn.addEventListener("click", ()=>go(3));
+    if(physDone){ $("seeSavedRow").innerHTML=`<a href="#" id="seeSaved" style="font-size:13px;color:var(--teal-2);font-weight:600">See the ${physDone} draft${physDone===1?"":"s"} you've generated →</a>`; $("seeSaved").addEventListener("click",(e)=>{e.preventDefault();go(5);}); }
+  }
   focusHeading();
 }
 
@@ -459,6 +473,8 @@ function updateCounter(){
 async function approveForm(req){
   STEP=4; renderRail();
   const completed={}; $("stage").querySelectorAll("[data-fid]").forEach(el=>{ if(el.value.trim()) completed[el.dataset.fid]=el.value; });
+  const _ab=$("approveBtn"); if(_ab){ _ab.disabled=true; _ab.textContent="Generating…"; }
+  $("formResult").innerHTML=`<div class="empty">Generating the draft and follow-up task — a few seconds…</div>`;
   let res;
   try{ res=await (await fetch("/api/office/approve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({request_id:req.id, completed_fields:completed})})).json(); }
   catch(e){ $("formResult").innerHTML=`<div class="empty">Couldn't reach the backend.</div>`; STEP=3; renderRail(); return; }
@@ -514,7 +530,9 @@ async function renderPayoff(){
       </table>
     </div>
     <div class="payoff-foot">Every draft and task above is real output your staff can act on now.</div>
+    <div class="primary-row"><button class="btn lg" id="backToDeskBtn">← Back to the forms</button></div>
   </div>`;
+  const _bd=$("backToDeskBtn"); if(_bd) _bd.addEventListener("click", ()=>go(2));
   // Single source of truth: the backend aggregates the same processed list. Don't
   // re-sum client-side (the request-id lookup is type-fragile and diverged from the headline).
   let proj={}; try{ proj=await (await fetch("/api/office/metrics",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({processed:Object.values(processed)})})).json(); }catch(e){}

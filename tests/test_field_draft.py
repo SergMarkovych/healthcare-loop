@@ -105,12 +105,13 @@ def test_partial_draft_only_overlays_returned_fields(monkeypatch):
     assert fields["prognosis"]["needs_physician"] is True
 
 
-def test_approve_treats_drafted_field_as_satisfied(monkeypatch):
+def test_approve_completes_when_clinical_fields_submitted(monkeypatch):
     monkeypatch.setattr(field_drafter, "FORCE_MOCK", False)
     monkeypatch.setattr(field_drafter.llm_client, "call_chat",
                         lambda *a, **kw: _DRAFT_JSON)
 
     res = service.approve_request("req-2", {
+        "functional_limitations": "Reduced exertional tolerance",
         "onset_date": "2026-01-10",
         "prognosis": "Good with adherence",
         "expected_duration": "6 months",

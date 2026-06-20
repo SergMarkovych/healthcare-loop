@@ -48,7 +48,7 @@ def get_queue() -> list[dict]:
     return queue
 
 
-def prefill_request(request_id: str) -> dict:
+def prefill_request(request_id: str, draft: bool = True) -> dict:
     req = next((r for r in REQUESTS if r["id"] == request_id), None)
     if not req:
         return {"status": "not_found"}
@@ -74,7 +74,7 @@ def prefill_request(request_id: str) -> dict:
     flagged = [k for k in forms.FORMS[form_id]["fields"]
                if fl.get(k, {}).get("needs_physician") and not fl.get(k, {}).get("value")]
     field_specs = [{"field_id": k, "label": forms.FIELD_LABELS.get(k, k)} for k in flagged]
-    if has_extraction and field_specs:
+    if draft and has_extraction and field_specs:
         drafts = field_drafter.draft_clinical_fields(extraction, field_specs)
         for k, d in drafts.items():
             cell = fl[k]
@@ -94,7 +94,7 @@ def prefill_request(request_id: str) -> dict:
     referral_options = []
     title_lower = req.get("title", "").lower()
     category_lower = req.get("category", "").lower()
-    if "referral" in title_lower or "referral" in category_lower or "refer" in title_lower:
+    if draft and ("referral" in title_lower or "referral" in category_lower or "refer" in title_lower):
         referral_options = referral_intel.suggest(req.get("title", ""))
 
     return {"status": "ok", "request": req, **cls, "mode": mode,
@@ -122,7 +122,7 @@ def approve_request(request_id: str, completed_fields: dict | None = None) -> di
     fields the physician left blank are reported as outstanding — never invented.
     """
     completed_fields = completed_fields or {}
-    base = prefill_request(request_id)
+    base = prefill_request(request_id, draft=False)
     if base.get("status") != "ok":
         return base  # not_found / no_form passthrough
 
