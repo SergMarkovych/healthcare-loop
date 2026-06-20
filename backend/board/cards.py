@@ -1,12 +1,23 @@
 """
 Patient Context Board cards — pure restatement of source-backed FHIR facts.
 
-Safety story (mirrors backend/fhir/summarize.py): these cards may ONLY restate
-data the API returned. No diagnosis, no prognosis, no interpretation of whether a
+Canonical V4 5-card shape (docs/design/v4-board-ui.md §3), in this order:
+  1. patient_snapshot  — demographics, active Conditions, current Medications, last visit.
+  2. new_updated       — one item per pdiff.new / pdiff.updated; updated items show each
+                         field change as previous -> current, with a best-effort query hint.
+  3. open_workflow     — open Task/ServiceRequest items (same status logic as summarize).
+  4. limitations       — not_returned keys + requested-but-absent resource types.
+  5. source_references — the deduped ResourceType/id provenance list across the board.
+
+Safety story (mirrors backend/fhir/summarize.py and backend/fhir/rules.py): these cards may
+ONLY restate data the API returned. No diagnosis, no prognosis, no interpretation of whether a
 value is good/bad. The deterministic builder composes every item from structured
-resources/diff, so it literally cannot invent clinical content; each item carries
-a source_reference back to the resource it came from.
+resources/diff, so it literally cannot invent clinical content; each item carries a
+source_reference back to the resource it came from.
 """
+
+from backend.fhir import summarize as summarizemod
+from backend.fhir.client import CORE_TYPES
 
 
 def _ref(res: dict) -> str:
@@ -70,6 +81,19 @@ def _encounter_when(res: dict) -> str | None:
     return None
 
 
+def _type_of_ref(ref: str) -> str:
+    """ResourceType from a 'ResourceType/id' key (best-effort)."""
+    return ref.split("/", 1)[0] if "/" in ref else ref
+
+
+def _source_query(ref: str, patient_id: str) -> str:
+    """Best-effort source-API query hint. The exact query isn't persisted, so this
+    reconstructs the canonical patient-scoped search the resource would have come from."""
+    return f"{_type_of_ref(ref)}?patient={patient_id}"
+
+
+# --- Card 1: patient snapshot --------------------------------------------------
+
 def _snapshot_card(patient: dict | None, current_resources: list[dict]) -> dict:
     items: list[dict] = []
     if patient:
@@ -116,75 +140,69 @@ def _snapshot_card(patient: dict | None, current_resources: list[dict]) -> dict:
     return {"id": "patient_snapshot", "title": "Patient snapshot", "items": items}
 
 
-def _dosage_change(field_changes: list[dict]) -> dict | None:
-    for c in field_changes:
-        if "dosageInstruction" in c.get("path", "") and c.get("change") == "changed":
-            return c
-    return None
+# --- Card 2: new / updated -----------------------------------------------------
 
-
-def _attention_card(current_resources: list[dict], pdiff: dict) -> dict:
+def _new_updated_card(current_resources: list[dict], pdiff: dict, patient_id: str) -> dict:
     items: list[dict] = []
     current_by_ref = {_ref(r): r for r in current_resources}
 
-    for upd in pdiff.get("updated", []):
-        if upd.get("resource_type") != "MedicationRequest":
-            continue
-        ref = upd["key"]
+    for it in pdiff.get("new", []):
+        ref = it["key"]
+        rt = it.get("resource_type") or _type_of_ref(ref)
+        items.append({
+            "text": f"New {rt} returned since last scan.",
+            "source_reference": ref,
+            "source_query": _source_query(ref, patient_id),
+            "change_status": "new",
+            "evidence": {"change": "new"},
+        })
+
+    for it in pdiff.get("updated", []):
+        ref = it["key"]
+        rt = it.get("resource_type") or _type_of_ref(ref)
         res = current_by_ref.get(ref, {})
-        med = _codeable_text(res, "medicationCodeableConcept", "medicationReference") or "Medication"
-        dose = _dosage_change(upd.get("field_changes") or [])
-        if dose:
-            text = f"{med} dose changed: {dose['old']} -> {dose['new']}"
+        label = (
+            _codeable_text(res, "code", "medicationCodeableConcept", "medicationReference")
+            or rt
+        )
+        field_changes = it.get("field_changes") or []
+        changes: list[dict] = []
+        for c in field_changes:
+            changes.append({
+                "path": c.get("path"),
+                "previous": c.get("old"),
+                "current": c.get("new"),
+                "change": c.get("change"),
+            })
+        change_phrases = [
+            f"{c['path']}: {c['previous']!r} -> {c['current']!r}"
+            for c in changes if c.get("change") == "changed"
+        ]
+        if change_phrases:
+            text = f"{label} updated — " + "; ".join(change_phrases)
         else:
-            text = f"{med} order updated: {upd.get('change_count', 0)} field change(s)"
+            text = f"{label} updated: {it.get('change_count', len(field_changes))} field change(s)."
         items.append({
             "text": text,
             "source_reference": ref,
-            "evidence": dose or {"change_count": upd.get("change_count", 0)},
+            "source_query": _source_query(ref, patient_id),
+            "change_status": "updated",
+            "evidence": {"change": "updated", "change_count": it.get("change_count", len(field_changes))},
+            "changes": changes,
         })
 
-    for res in current_resources:
-        if res.get("resourceType") != "Observation":
-            continue
-        label = _codeable_text(res, "code") or _ref(res)
-        value = _observation_value(res)
-        text = f"Observation on record: {label}"
-        if value is not None:
-            text += f" = {value}"
-        items.append({"text": text, "source_reference": _ref(res)})
-
-    return {"id": "attention", "title": "Worth a glance", "items": items}
+    return {"id": "new_updated", "title": "New / updated", "items": items}
 
 
-def _review_queue_card(current_resources: list[dict], pdiff: dict) -> dict:
+# --- Card 3: open workflow -----------------------------------------------------
+
+def _open_workflow_card(current_resources: list[dict]) -> dict:
     items: list[dict] = []
-    counts = pdiff.get("counts", {})
-
-    for it in pdiff.get("new", []):
-        items.append({
-            "text": f"New since last scan: {it['key']}",
-            "source_reference": it["key"],
-            "evidence": {"change": "new"},
-        })
-    for it in pdiff.get("updated", []):
-        items.append({
-            "text": f"Updated since last scan: {it['key']} ({it.get('change_count', 0)} field change(s))",
-            "source_reference": it["key"],
-            "evidence": {"change": "updated", "change_count": it.get("change_count", 0)},
-        })
-    for it in pdiff.get("not_returned", []):
-        items.append({
-            "text": f"Not returned by current API response: {it['key']}",
-            "source_reference": it["key"],
-            "evidence": {"change": "not_returned"},
-        })
-
     for res in current_resources:
-        if res.get("resourceType") != "Task":
+        if res.get("resourceType") not in ("Task", "ServiceRequest"):
             continue
         status = (res.get("status") or "").lower()
-        if status in ("completed", "cancelled", "failed", "rejected", "entered-in-error"):
+        if status not in summarizemod._WORKFLOW_OPEN:
             continue
         label = _codeable_text(res, "code") or res.get("description") or _ref(res)
         items.append({
@@ -192,17 +210,90 @@ def _review_queue_card(current_resources: list[dict], pdiff: dict) -> dict:
             "source_reference": _ref(res),
             "evidence": {"status": res.get("status")},
         })
+    return {"id": "open_workflow", "title": "Open workflow", "items": items}
 
-    title = (
-        f"Review queue — {counts.get('new', 0)} new, "
-        f"{counts.get('updated', 0)} updated, {counts.get('not_returned', 0)} not returned"
+
+# --- Card 4: limitations -------------------------------------------------------
+
+_LIMITATION_NOTE = "absent from the API response — reported not-returned, not deleted"
+
+
+def _limitations_card(
+    patient: dict | None, current_resources: list[dict], pdiff: dict, patient_id: str
+) -> dict:
+    # Reuse summarize.build_board's limitations computation rather than reinventing it.
+    sub_board = summarizemod.build_board(
+        patient_id, patient, pdiff, current_resources, CORE_TYPES
     )
-    return {"id": "review_queue", "title": title, "items": items}
+
+    items: list[dict] = []
+
+    for it in pdiff.get("not_returned", []):
+        ref = it["key"]
+        rt = it.get("resource_type") or _type_of_ref(ref)
+        items.append({
+            "text": f"{ref} ({rt}) {_LIMITATION_NOTE}.",
+            "source_reference": ref,
+            "evidence": {"change": "not_returned"},
+        })
+
+    present_types = {r.get("resourceType") for r in current_resources}
+    not_returned_types = sorted(t for t in CORE_TYPES if t not in present_types)
+    for t in not_returned_types:
+        items.append({
+            "text": f"{t}: requested resource type {_LIMITATION_NOTE}.",
+            "source_reference": None,
+            "evidence": {"requested_type_absent": t},
+        })
+
+    card = {"id": "limitations", "title": "Not returned & API limitations", "items": items}
+    card["data_source_limitations"] = sub_board["data_source_limitations"]
+    return card
+
+
+# --- Card 5: source references -------------------------------------------------
+
+def _source_references_card(card_list: list[dict], patient_id: str) -> dict:
+    refs = sorted({
+        item["source_reference"]
+        for card in card_list
+        for item in card["items"]
+        if item.get("source_reference")
+    })
+    items = [
+        {
+            "text": ref,
+            "source_reference": ref,
+            "source_query": _source_query(ref, patient_id),
+        }
+        for ref in refs
+    ]
+    return {"id": "source_references", "title": "Source references", "items": items}
 
 
 def build_cards(patient: dict | None, current_resources: list[dict], pdiff: dict) -> list[dict]:
-    return [
-        _snapshot_card(patient, current_resources),
-        _attention_card(current_resources, pdiff),
-        _review_queue_card(current_resources, pdiff),
-    ]
+    patient_id = (patient or {}).get("id") or _patient_id_from(current_resources, pdiff)
+
+    snapshot = _snapshot_card(patient, current_resources)
+    new_updated = _new_updated_card(current_resources, pdiff, patient_id)
+    open_workflow = _open_workflow_card(current_resources)
+    limitations = _limitations_card(patient, current_resources, pdiff, patient_id)
+
+    source_refs = _source_references_card(
+        [snapshot, new_updated, open_workflow, limitations], patient_id
+    )
+
+    return [snapshot, new_updated, open_workflow, limitations, source_refs]
+
+
+def _patient_id_from(current_resources: list[dict], pdiff: dict) -> str:
+    for grp in ("new", "updated", "not_returned"):
+        for it in pdiff.get(grp, []):
+            if it.get("patient_id"):
+                return it["patient_id"]
+    for r in current_resources:
+        subj = r.get("subject") or r.get("for") or {}
+        ref = subj.get("reference") if isinstance(subj, dict) else None
+        if isinstance(ref, str) and "/" in ref:
+            return ref.split("/")[-1]
+    return "unknown"

@@ -9,6 +9,7 @@ adds no clinical content; it restates these facts with source references.
 
 from backend.board import cards
 from backend.fhir import diff as diffmod
+from backend.fhir import rules
 from backend.fhir import service as fhir_service
 
 
@@ -20,13 +21,15 @@ def get_board(patient_id: str) -> dict:
     patient, current_resources = fhir_service.current_resources_for_patient(patient_id)
     if patient is None and not current_resources:
         return {"status": "no_scans", "mode": "deterministic",
-                "patient": {"id": patient_id, "name": None}, "cards": [], "sources": []}
+                "patient": {"id": patient_id, "name": None},
+                "cards": [], "flags": [], "sources": []}
 
     full = fhir_service.diff_last_two()
     pdiff = (diffmod.filter_for_patient(full["diff"], patient_id)
              if full.get("status") == "ok" else _empty_pdiff())
 
     card_list = cards.build_cards(patient, current_resources, pdiff)
+    flags = rules.evaluate(pdiff, current_resources, patient_id)
 
     sources = sorted({
         item["source_reference"]
@@ -40,5 +43,6 @@ def get_board(patient_id: str) -> dict:
         "mode": "deterministic",
         "patient": {"id": patient_id, "name": cards._display_name(patient)},
         "cards": card_list,
+        "flags": flags,
         "sources": sources,
     }
